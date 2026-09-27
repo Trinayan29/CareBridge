@@ -1,0 +1,10 @@
+{
+  "description": "An AI-powered healthcare navigation platform that helps users understand health information, analyze medical reports, and prepare for doctor visits.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

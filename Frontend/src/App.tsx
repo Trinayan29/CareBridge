@@ -1,0 +1,1658 @@
+﻿import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
+import {
+  loginUser,
+  registerUser,
+  getCurrentUser,
+  getHealthProfile,
+  updateHealthProfile,
+  createHealthConcern,
+  uploadMedicalDocument,
+  getMedicalDocuments,
+  analyzeMedicalDocument,
+  getHealthTimeline,
+  createDoctorVisit,
+  getDoctorVisits,
+} from "./api";
+
+type Page =
+  | "home"
+  | "login"
+  | "signup"
+  | "dashboard"
+  | "assistant"
+  | "concerns"
+  | "reports"
+  | "profile"
+  | "timeline"
+  | "visit"
+  | "settings";
+
+type User = {
+  id?: number;
+  name: string;
+  email: string;
+};
+
+type IconName =
+  | "activity"
+  | "arrow"
+  | "bell"
+  | "calendar"
+  | "chat"
+  | "check"
+  | "chevron"
+  | "clipboard"
+  | "clock"
+  | "document"
+  | "heart"
+  | "home"
+  | "lock"
+  | "menu"
+  | "moon"
+  | "plus"
+  | "search"
+  | "send"
+  | "settings"
+  | "shield"
+  | "sparkles"
+  | "sun"
+  | "upload"
+  | "user"
+  | "users"
+  | "warning"
+  | "x";
+
+const iconPaths: Record<IconName, ReactNode> = {
+  activity: <path d="M3 12h4l2.2-6 4 12 2.2-6H21" />,
+  arrow: <path d="m9 18 6-6-6-6" />,
+  bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></>,
+  calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /></>,
+  chat: <><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z" /><path d="M8 9h8M8 13h5" /></>,
+  check: <path d="m5 12 4 4L19 6" />,
+  chevron: <path d="m6 9 6 6 6-6" />,
+  clipboard: <><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4.5V3h6v1.5M9 9h6M9 13h6M9 17h4" /></>,
+  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  document: <><path d="M6 2h8l4 4v16H6Z" /><path d="M14 2v5h5M9 12h6M9 16h6" /></>,
+  heart: <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.7-7.5 1.1-1.1a5.5 5.5 0 0 0 0-7.8Z" />,
+  home: <><path d="m3 11 9-8 9 8" /><path d="M5 10v11h14V10M9 21v-7h6v7" /></>,
+  lock: <><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></>,
+  menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+  moon: <path d="M20 15.3A9 9 0 0 1 8.7 4a9 9 0 1 0 11.3 11.3Z" />,
+  plus: <path d="M12 5v14M5 12h14" />,
+  search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></>,
+  send: <><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></>,
+  settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z" /></>,
+  shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-5" /></>,
+  sparkles: <><path d="m12 3-1.3 3.7L7 8l3.7 1.3L12 13l1.3-3.7L17 8l-3.7-1.3ZM5 15l-.8 2.2L2 18l2.2.8L5 21l.8-2.2L8 18l-2.2-.8ZM19 14l-.8 2.2L16 17l2.2.8L19 20l.8-2.2L22 17l-2.2-.8Z" /></>,
+  sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>,
+  upload: <><path d="M12 16V3M7 8l5-5 5 5" /><path d="M5 14v6h14v-6" /></>,
+  user: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
+  users: <><circle cx="9" cy="8" r="4" /><path d="M2 21a7 7 0 0 1 14 0M17 4a4 4 0 0 1 0 8M18 15a6 6 0 0 1 4 6" /></>,
+  warning: <><path d="M12 3 2 21h20Z" /><path d="M12 9v5M12 18h.01" /></>,
+  x: <path d="m6 6 12 12M18 6 6 18" />,
+};
+
+function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
+  return <svg aria-hidden="true" className="icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{iconPaths[name]}</svg>;
+}
+
+function Logo({ compact = false }: { compact?: boolean }) {
+  return <div className="logo"><span className="logo-mark"><Icon name="heart" size={19} /></span>{!compact && <span>CareBridge</span>}</div>;
+}
+
+function Button({ children, variant = "primary", icon, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger"; icon?: IconName }) {
+  return <button className={`btn btn-${variant} ${className}`} {...props}>{icon && <Icon name={icon} size={18} />}{children}</button>;
+}
+
+function Field({ label, textarea, hint, onValueChange, onChange, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; textarea?: boolean; hint?: string; onValueChange?: (value: string) => void }) {
+  return <label className="field"><span>{label}</span>{textarea ? <textarea className="input textarea" name={props.name} placeholder={props.placeholder} value={props.value as string | undefined} defaultValue={props.defaultValue as string | undefined} disabled={props.disabled} onChange={event => onValueChange?.(event.target.value)} /> : <input className="input" {...props} onChange={event => { onChange?.(event); onValueChange?.(event.target.value); }} />}{hint && <small>{hint}</small>}</label>;
+}
+
+function Badge({ children, tone = "neutral", className = "", style }: { children: ReactNode; tone?: "neutral" | "success" | "warning" | "danger" | "info"; className?: string; style?: React.CSSProperties }) {
+  return <span className={`badge badge-${tone} ${className}`.trim()} style={style}>{children}</span>;
+}
+
+function Card({ children, className = "", ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={`card ${className}`} {...props}>{children}</div>;
+}
+
+function ThemeToggle({ dark, setDark }: { dark: boolean; setDark: (v: boolean) => void }) {
+  return <Button variant="ghost" className="icon-btn" onClick={() => setDark(!dark)} aria-label="Toggle color theme"><Icon name={dark ? "sun" : "moon"} /></Button>;
+}
+
+type ToastTone = "success" | "info" | "danger";
+
+function notify(message: string, tone: ToastTone = "success") {
+  window.dispatchEvent(new CustomEvent("carebridge:toast", { detail: { message, tone } }));
+}
+
+function ToastHost() {
+  const [toasts, setToasts] = useState<{ id: number; message: string; tone: ToastTone }[]>([]);
+  useEffect(() => {
+    const receive = (event: Event) => {
+      const { message, tone } = (event as CustomEvent).detail;
+      const id = Date.now();
+      setToasts(current => [...current, { id, message, tone }]);
+      window.setTimeout(() => setToasts(current => current.filter(toast => toast.id !== id)), 3200);
+    };
+    window.addEventListener("carebridge:toast", receive);
+    return () => window.removeEventListener("carebridge:toast", receive);
+  }, []);
+  return <div className="toast-stack" aria-live="polite">{toasts.map(toast => <div className={`toast toast-${toast.tone}`} key={toast.id}><span><Icon name={toast.tone === "danger" ? "warning" : toast.tone === "info" ? "bell" : "check"} /></span><p>{toast.message}</p><button onClick={() => setToasts(current => current.filter(item => item.id !== toast.id))} aria-label="Dismiss notification"><Icon name="x" size={16} /></button></div>)}</div>;
+}
+
+const features = [
+  ["chat", "AI Health Assistant", "Get clear, personalized explanations and next-step guidance for everyday health questions."],
+  ["document", "Medical Report Analyzer", "Turn complex reports into plain-language information and useful questions for your care team."],
+  ["users", "Care Navigation", "Understand where to go, who to see and how to access the right level of support."],
+  ["clipboard", "Doctor Visit Preparation", "Organize symptoms, medications and questions into a focused visit summary."],
+  ["activity", "Personal Health Timeline", "Keep health events and documents together in a clear, chronological view."],
+  ["sparkles", "Smart Health Guidance", "Receive responsible, AI-assisted guidance designed around your health context."],
+] as const;
+
+function Home({ navigate, dark, setDark }: { navigate: (p: Page) => void; dark: boolean; setDark: (v: boolean) => void }) {
+  return <div className="marketing">
+    <nav className="topnav container">
+      <Logo />
+      <div className="navlinks"><a href="#home">Home</a><a href="#features">Features</a><a href="#how">How it works</a><a href="#about">About</a></div>
+      <div className="nav-actions"><ThemeToggle dark={dark} setDark={setDark} /><Button variant="ghost" onClick={() => navigate("login")}>Log in</Button><Button onClick={() => navigate("signup")}>Sign up</Button></div>
+    </nav>
+    <main>
+      <section className="hero container" id="home">
+        <div className="hero-copy">
+          <Badge tone="info"><Icon name="sparkles" size={14} /> Healthcare guidance, made clearer</Badge>
+          <h1>Your health.<br /><span>Better understood.</span></h1>
+          <p>CareBridge helps you make sense of health information, understand medical reports, prepare for doctor visits, and navigate your next step with confidence.</p>
+          <div className="hero-actions"><Button onClick={() => navigate("signup")}>Get started <Icon name="arrow" /></Button><Button variant="secondary" onClick={() => document.querySelector("#features")?.scrollIntoView({ behavior: "smooth" })}>Explore features</Button></div>
+          <div className="trust-row"><span><Icon name="shield" size={17} /> Private & secure</span><span><Icon name="check" size={17} /> Clinically responsible</span><span><Icon name="heart" size={17} /> Built for real people</span></div>
+        </div>
+        <div className="hero-visual">
+          <div className="glow" />
+          <Card className="assistant-preview">
+            <div className="preview-head"><span className="bot-avatar"><Icon name="sparkles" /></span><div><strong>CareBridge Assistant</strong><small>Here to help you prepare</small></div><Badge tone="success">Online</Badge></div>
+            <div className="preview-message">I can help you understand health information and decide what to discuss with a healthcare professional.</div>
+            <div className="suggestion"><Icon name="document" /><div><strong>Report explained</strong><span>Your blood test summary is ready</span></div><span className="round-check"><Icon name="check" size={14} /></span></div>
+            <div className="preview-input"><span>Ask a health question...</span><span className="send-circle"><Icon name="send" size={16} /></span></div>
+          </Card>
+          <Card className="floating-card floating-top"><span className="mini-icon teal"><Icon name="clipboard" size={18} /></span><div><strong>Visit ready</strong><small>Summary created</small></div></Card>
+          <Card className="floating-card floating-bottom"><span className="mini-icon blue"><Icon name="shield" size={18} /></span><div><strong>Your data is protected</strong><small>Privacy comes first</small></div></Card>
+        </div>
+      </section>
+
+      <section className="section container" id="features">
+        <div className="section-heading"><Badge tone="info">Everything in one place</Badge><h2>Support for every step of your health journey</h2><p>Thoughtful tools that help you feel informed, organized and prepared.</p></div>
+        <div className="feature-grid">{features.map(([icon, title, copy]) => <Card className="feature-card" key={title}><span className="feature-icon"><Icon name={icon} /></span><h3>{title}</h3><p>{copy}</p><button className="text-link" onClick={() => navigate("signup")}>Learn more <Icon name="arrow" size={16} /></button></Card>)}</div>
+      </section>
+
+      <section className="how-section" id="how"><div className="container"><div className="section-heading"><Badge tone="info">Simple by design</Badge><h2>From uncertainty to a clearer next step</h2></div><div className="steps">{["Create your private profile", "Add relevant health information", "Describe a concern or upload a report", "Receive AI-assisted guidance", "Prepare for professional care"].map((step, i) => <div className="step" key={step}><span>{i + 1}</span><strong>{step}</strong>{i < 4 && <i />}</div>)}</div></div></section>
+
+      <section className="safety container" id="about">
+        <Card className="safety-card"><span className="safety-icon"><Icon name="shield" size={26} /></span><div><h3>Designed for safe, responsible support</h3><p>CareBridge provides general health information and healthcare navigation. It does not diagnose conditions, prescribe medication, or replace advice from a qualified healthcare professional.</p></div></Card>
+        <Card className="emergency-card"><Icon name="warning" size={24} /><div><strong>Think this may be an emergency?</strong><p>Call your local emergency services immediately. Do not wait for guidance from CareBridge.</p></div></Card>
+      </section>
+    </main>
+    <footer><div className="container footer-inner"><Logo /><p>Clearer information. More confident care.</p><span>Â© 2026 CareBridge Health</span></div></footer>
+  </div>;
+}
+
+function Auth({ mode, navigate, dark, setDark }: { mode: "login" | "signup"; navigate: (p: Page) => void; dark: boolean; setDark: (v: boolean) => void }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const submit = async (e: FormEvent) => {
+  e.preventDefault();
+
+  const form = new FormData(e.currentTarget as HTMLFormElement);
+
+  const name = String(form.get("name") || "").trim();
+  const email = String(form.get("email") || "").trim();
+  const password = String(form.get("password") || "");
+  const confirm = String(form.get("confirm") || "");
+  const terms = form.get("terms");
+
+  if (
+    !email ||
+    !password ||
+    (mode === "signup" && (!name || !confirm || !terms))
+  ) {
+    setError(
+      "Please complete all required fields before continuing."
+    );
+    return;
+  }
+
+  if (mode === "signup" && password !== confirm) {
+    setError("Your passwords do not match. Please try again.");
+    return;
+  }
+
+  setError("");
+  setLoading(true);
+
+  try {
+    if (mode === "signup") {
+      await registerUser(name, email, password);
+
+      setSuccess(true);
+    } else {
+      const data = await loginUser(email, password);
+
+      localStorage.setItem(
+        "access_token",
+        data.access_token
+      );
+
+      localStorage.setItem(
+        "token_type",
+        data.token_type || "bearer"
+      );
+
+      navigate("dashboard");
+    }
+  } catch (error) {
+    setError(
+      error instanceof Error
+        ? error.message
+        : "Unable to connect to CareBridge."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+  return <div className="auth-page">
+    <div className="auth-top"><button className="logo-button" onClick={() => navigate("home")}><Logo /></button><ThemeToggle dark={dark} setDark={setDark} /></div>
+    <div className="auth-layout">
+      <div className="auth-aside"><Badge tone="info"><Icon name="shield" size={14} /> Safe, private support</Badge><h1>{mode === "login" ? "Welcome back to clearer healthcare." : "Feel more prepared for every health conversation."}</h1><p>Understand your health information and take the next step with confidence.</p><div className="auth-points"><span><Icon name="check" /> Plain-language health information</span><span><Icon name="check" /> Your health data in one secure place</span><span><Icon name="check" /> Better prepared doctor visits</span></div></div>
+      <Card className="auth-card">
+        <h2>{mode === "login" ? "Log in to CareBridge" : "Create your account"}</h2><p>{mode === "login" ? "Good to see you again." : "Start your journey to better understood health."}</p>
+        {error && <div className="alert error"><Icon name="warning" />{error}</div>}
+        {success && <div className="alert success"><Icon name="check" />Account created successfully. You can now log in.</div>}
+        <form onSubmit={submit} noValidate>
+          {mode === "signup" && <Field name="name" label="Full name" placeholder="Alex Morgan" required />}
+          <Field name="email" type="email" label="Email address" placeholder="you@example.com" required />
+          <Field name="password" type="password" label="Password" placeholder="Enter your password" required />
+          {mode === "signup" && <Field name="confirm" type="password" label="Confirm password" placeholder="Repeat your password" required />}
+          <div className="form-row"><label className="checkbox"><input name={mode === "signup" ? "terms" : "remember"} type="checkbox" /><span>{mode === "login" ? "Remember me" : "I agree to the Terms and Privacy Policy"}</span></label>{mode === "login" && <button type="button" className="text-link" onClick={() => notify("Password reset instructions have been sent to your email.", "info")}>Forgot password?</button>}</div>
+          <Button className="full" disabled={loading}>{loading ? <><span className="spinner" /> Please wait...</> : mode === "login" ? "Log in" : "Create account"}</Button>
+        </form>
+        <div className="auth-switch">{mode === "login" ? "New to CareBridge?" : "Already have an account?"} <button onClick={() => navigate(mode === "login" ? "signup" : "login")}>{mode === "login" ? "Create an account" : "Log in"}</button></div>
+        <div className="secure-note"><Icon name="lock" size={15} />Your information is encrypted and kept private.</div>
+      </Card>
+    </div>
+  </div>;
+}
+
+const navItems: [Page, IconName, string][] = [
+  ["dashboard", "home", "Dashboard"],
+  ["assistant", "chat", "AI Health Assistant"],
+  ["concerns", "heart", "Health Concerns"],
+  ["reports", "document", "Medical Reports"],
+  ["profile", "user", "Health Profile"],
+  ["timeline", "activity", "Health Timeline"],
+  ["visit", "clipboard", "Doctor Visit Prep"],
+  ["settings", "settings", "Settings"],
+];
+
+const searchItems: { page: Page; icon: IconName; title: string; description: string; keywords: string }[] = [
+  { page: "dashboard", icon: "home", title: "Dashboard overview", description: "Quick actions, recent activity, and health overview", keywords: "home stats active concerns recent activities" },
+  { page: "assistant", icon: "chat", title: "AI Health Assistant", description: "Ask a health question or understand health information", keywords: "chat ai guidance question symptoms support" },
+  { page: "concerns", icon: "heart", title: "Describe a health concern", description: "Share symptoms and receive general guidance", keywords: "symptoms headache pain concern monitor professional care" },
+  { page: "reports", icon: "upload", title: "Upload a medical report", description: "Upload PDF, JPG, JPEG, or PNG documents", keywords: "upload file document scan lab pdf jpg png" },
+  { page: "reports", icon: "document", title: "Blood test analysis", description: "View extracted information and plain-language explanation", keywords: "blood test result laboratory analysis completed report" },
+  { page: "profile", icon: "user", title: "Health profile", description: "Update personal information, allergies, and medications", keywords: "name birthday blood group allergies conditions medication emergency contact" },
+  { page: "timeline", icon: "activity", title: "Health timeline", description: "Review concerns, documents, guidance, and visits", keywords: "history event activity date medical analysis" },
+  { page: "visit", icon: "clipboard", title: "Prepare for a doctor visit", description: "Organize symptoms, medications, and questions", keywords: "appointment summary print doctor questions severity duration" },
+  { page: "settings", icon: "settings", title: "Account settings", description: "Manage your email and account preferences", keywords: "account email profile preferences" },
+  { page: "settings", icon: "moon", title: "Appearance settings", description: "Choose light, dark, or system appearance", keywords: "theme mode display light dark system" },
+  { page: "settings", icon: "lock", title: "Password and privacy", description: "Update security and privacy preferences", keywords: "security logout delete account password privacy" },
+];
+
+function AppShell({
+  page,
+  navigate,
+  dark,
+  setDark,
+}: {
+  page: Page;
+  navigate: (p: Page) => void;
+  dark: boolean;
+  setDark: (v: boolean) => void;
+}) {
+  const [menu, setMenu] = useState(false);
+  const [logout, setLogout] = useState(false);
+  const [notifications, setNotifications] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+const [userLoading, setUserLoading] = useState(true);
+
+useEffect(() => {
+  const loadUser = async () => {
+    try {
+      const data = await getCurrentUser();
+      setUser(data);
+    } catch (error) {
+      console.error("Failed to load current user:", error);
+    } finally {
+      setUserLoading(false);
+    }
+  };
+
+  loadUser();
+}, []);
+  const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [selectedResult, setSelectedResult] = useState(0);
+  const searchRef = useRef<HTMLFormElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const title = navItems.find(([p]) => p === page)?.[2] || "Dashboard";
+  const normalizedSearch = search.trim().toLowerCase();
+  const searchResults = normalizedSearch
+    ? searchItems.filter(item => `${item.title} ${item.description} ${item.keywords}`.toLowerCase().includes(normalizedSearch)).slice(0, 6)
+    : searchItems.slice(0, 5);
+  useEffect(() => {
+    const closeSearch = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) setSearchOpen(false);
+    };
+    document.addEventListener("mousedown", closeSearch);
+    return () => document.removeEventListener("mousedown", closeSearch);
+  }, []);
+  const openResult = (item: typeof searchItems[number]) => {
+    navigate(item.page); setSearch(""); setSearchOpen(false); setSelectedResult(0);
+    notify(`Opened ${item.title}.`, "info");
+  };
+  const runSearch = (event?: FormEvent) => {
+    event?.preventDefault();
+    if (!search.trim()) { setSearchOpen(true); searchInputRef.current?.focus(); return; }
+    const match = searchResults[selectedResult] || searchResults[0];
+    if (match) openResult(match);
+    else { setSearchOpen(true); notify(`No results found for â€œ${search}â€. Try another search.`, "danger"); }
+  };
+  return <div className="app-shell">
+    <aside className={`sidebar ${menu ? "open" : ""}`}>
+      <div className="sidebar-logo"><Logo /><Button variant="ghost" className="close-menu" onClick={() => setMenu(false)}><Icon name="x" /></Button></div>
+      <nav>{navItems.map(([p, icon, label]) => <button key={p} className={page === p ? "active" : ""} onClick={() => { navigate(p); setMenu(false); }}><Icon name={icon} /><span>{label}</span></button>)}</nav>
+      <div className="sidebar-bottom"><Card className="privacy-card">
+          <Icon name="shield" />
+          <div>
+            <strong>Your privacy matters</strong>
+            <p>Your health information is encrypted and never sold.</p>
+            <button className="text-link" onClick={() => navigate("settings")}>Learn about privacy</button>
+          </div>
+        </Card>
+<Card className="help-card"><span><Icon name="heart" size={17} /></span><strong>Need urgent help?</strong><small>Call local emergency services</small></Card><button onClick={() => setLogout(true)}><Icon name="lock" /><span>Log out</span></button></div>
+    </aside>
+    <div className="app-content">
+      <header className="app-header"><div className="header-title"><Button variant="ghost" className="menu-btn" onClick={() => setMenu(true)}><Icon name="menu" /></Button><div><small>CareBridge</small><h2>{title}</h2></div></div><div className="header-actions"><form ref={searchRef} className={`search ${searchOpen ? "open" : ""}`} onSubmit={runSearch} role="search"><button className="search-trigger" type="button" onClick={() => { if (search.trim()) runSearch(); else { setSearchOpen(true); searchInputRef.current?.focus(); } }} aria-label="Search CareBridge"><Icon name="search" size={18} /></button><input ref={searchInputRef} value={search} onFocus={() => setSearchOpen(true)} onChange={event => { setSearch(event.target.value); setSelectedResult(0); setSearchOpen(true); }} onKeyDown={event => { if (event.key === "ArrowDown") { event.preventDefault(); setSelectedResult(index => Math.min(index + 1, searchResults.length - 1)); } if (event.key === "ArrowUp") { event.preventDefault(); setSelectedResult(index => Math.max(index - 1, 0)); } if (event.key === "Escape") { setSearchOpen(false); searchInputRef.current?.blur(); } }} placeholder="Search CareBridge..." aria-label="Search CareBridge" aria-expanded={searchOpen} aria-controls="search-suggestions" autoComplete="off" />{search && <button className="search-clear" type="button" onClick={() => { setSearch(""); setSelectedResult(0); searchInputRef.current?.focus(); }} aria-label="Clear search"><Icon name="x" size={15} /></button>}{searchOpen && <Card className="search-suggestions" id="search-suggestions"><div className="search-suggestions-head"><strong>{search ? "Search results" : "Suggested searches"}</strong><small>{searchResults.length} {searchResults.length === 1 ? "result" : "results"}</small></div>{searchResults.length ? searchResults.map((item, index) => <button type="button" className={index === selectedResult ? "selected" : ""} key={`${item.page}-${item.title}`} onMouseDown={event => event.preventDefault()} onMouseEnter={() => setSelectedResult(index)} onClick={() => openResult(item)}><span className="mini-icon teal"><Icon name={item.icon} size={18} /></span><p><strong>{item.title}</strong><small>{item.description}</small></p><Icon name="arrow" size={16} /></button>) : <div className="search-empty"><span><Icon name="search" /></span><strong>No results found</strong><small>Try â€œreportsâ€, â€œmedicationsâ€, â€œtimelineâ€, or â€œsettingsâ€.</small></div>}<div className="search-hint"><span><kbd>â†‘</kbd><kbd>â†“</kbd> to navigate</span><span><kbd>Enter</kbd> to open</span></div></Card>}</form><ThemeToggle dark={dark} setDark={setDark} /><div className="notification-wrap"><Button variant="ghost" className="icon-btn notify" onClick={() => setNotifications(!notifications)} aria-label="View notifications"><Icon name="bell" /><i /></Button>{notifications && <Card className="notification-menu"><div><strong>Notifications</strong><Badge tone="info">2 new</Badge></div><button onClick={() => { navigate("reports"); setNotifications(false); }}><span className="mini-icon blue"><Icon name="document" /></span><p><strong>Report analysis ready</strong><small>Your blood test summary is available.</small></p></button><button onClick={() => { navigate("visit"); setNotifications(false); }}><span className="mini-icon teal"><Icon name="calendar" /></span><p><strong>Visit reminder</strong><small>Prepare for your upcoming appointment.</small></p></button><Button variant="ghost" className="full" onClick={() => { setNotifications(false); notify("All notifications marked as read."); }}>Mark all as read</Button></Card>}</div><button className="profile-chip" onClick={() => navigate("profile")}>
+  <span>
+    {user?.name
+      ? user.name
+          .split(" ")
+          .map((part) => part[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase()
+      : "U"}
+  </span>
+
+  <div>
+    <strong>{user?.name || "My account"}</strong>
+    <small>My profile</small>
+  </div>
+
+  <Icon name="chevron" size={15} />
+</button></div></header>
+      <main className="page-content">
+        {page === "dashboard" && <Dashboard navigate={navigate} user={user} />}
+        {page === "assistant" && <Assistant />}
+        {page === "concerns" && <Concerns />}
+        {page === "reports" && <Reports />}
+        {page === "profile" && <Profile user={user} />}
+        {page === "timeline" && <Timeline />}
+        {page === "visit" && <Visit />}
+        {page === "settings" && <Settings dark={dark} setDark={setDark} onLogout={() => setLogout(true)} />}
+      </main>
+      <nav className="mobile-nav">{navItems.slice(0, 5).map(([p, icon, label]) => <button className={page === p ? "active" : ""} key={p} onClick={() => navigate(p)}><Icon name={icon} /><span>{label.replace("Health ", "")}</span></button>)}</nav>
+    </div>
+    {logout && <div className="modal-backdrop"><Card className="modal"><span className="modal-icon"><Icon name="lock" /></span><h2>Are you sure you want to log out?</h2><p>Youâ€™ll need to sign in again to access your health information.</p><div className="modal-actions"><Button variant="secondary" onClick={() => setLogout(false)}>Cancel</Button><Button variant="danger" onClick={() => navigate("login")}>Log out</Button></div></Card></div>}
+  </div>;
+}
+
+function Dashboard({
+  navigate,
+  user,
+}: {
+  navigate: (p: Page) => void;
+  user: User | null;
+}) {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+
+    document.querySelectorAll<HTMLElement>(
+      "main, .app-main, .main-content, .content, .page-content"
+    ).forEach((element) => {
+      element.scrollTop = 0;
+      element.scrollLeft = 0;
+    });
+  }, []);
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+  const [dashboardStats, setDashboardStats] = useState({
+  concerns: 0,
+  reports: 0,
+  timeline: 0,
+  });
+  const [recentEvents, setRecentEvents] = useState<any[]>([]);
+
+  useEffect(() => {
+  const loadDashboardStats = async () => {
+    try {
+      const [profile, reports, timeline] = await Promise.all([
+        getHealthProfile(),
+        getMedicalDocuments(),
+        getHealthTimeline(),
+      ]);
+
+      setDashboardStats({
+        concerns: 0,
+        reports: Array.isArray(reports) ? reports.length : 0,
+        timeline: Array.isArray(timeline) ? timeline.length : 0,
+      });
+
+      setRecentEvents(
+        Array.isArray(timeline) ? timeline.slice(0, 3) : []
+      );
+    } catch (error) {
+      console.error("Failed to load dashboard statistics:", error);
+    }
+  };
+
+  loadDashboardStats();
+}, []);
+  const actions: [Page, IconName, string, string][] = [
+    ["concerns", "heart", "Describe a health concern", "Get general guidance and helpful next steps"],
+    ["reports", "upload", "Upload a medical report", "Understand complex results in plain language"],
+    ["visit", "clipboard", "Prepare for a doctor visit", "Organize your symptoms and questions"],
+  ];
+  const stats = [
+  ["heart", String(dashboardStats.concerns), "Active concerns", "From your health concerns"],
+  ["document", String(dashboardStats.reports), "Medical reports", "Uploaded documents"],
+  ["activity", String(dashboardStats.timeline), "Timeline events", "Recorded health activity"],
+] as const;
+  return <div className="dashboard-page">
+    <div className="welcome"><div><Badge tone="info">{today}</Badge><h1>Good to see you, {user?.name?.split(" ")[0] || "there"}</h1><p>How can CareBridge help you today?</p></div><div className="wellbeing"><span className="pulse"><Icon name="heart" /></span><div><small>Your health space</small><strong>Everything looks up to date</strong></div></div></div>
+    <div className="quick-grid">{actions.map(([page, icon, title, copy], i) => <Card className={`quick-card quick-${i}`} key={title}><span className="quick-icon"><Icon name={icon} /></span><div><h3>{title}</h3><p>{copy}</p></div><Button variant="ghost" className="round-btn" onClick={() => navigate(page)}><Icon name="arrow" /></Button></Card>)}</div>
+    <div className="content-grid" style={{ gridTemplateColumns: "1fr" }}><div><div className="block-title"><div><h2>Your overview</h2><p>A snapshot of your recent health activity</p></div></div><div className="stats-grid">{stats.map(([icon, num, label, note]) => <Card className="stat-card" key={label}><span><Icon name={icon} /></span><div><strong>{num}</strong><p>{label}</p><small>{note}</small></div></Card>)}</div>
+      <div className="block-title activity-title"><div><h2>Recent activity</h2><p>Your latest updates across CareBridge</p></div><button className="text-link" onClick={() => navigate("timeline")}>View timeline <Icon name="arrow" size={16} /></button></div>
+      <Card className="activity-list">
+        {recentEvents.length === 0 ? (
+          <div
+            className="activity-item"
+            style={{
+              gridColumn: "1 / -1",
+              width: "100%",
+            }}
+          >
+            <div style={{ width: "100%" }}>
+              <strong>No recent activity</strong>
+              <p>Your recent health updates will appear here.</p>
+            </div>
+          </div>
+        ) : (
+          recentEvents.map((event) => {
+            const icon =
+              event.event_type === "medical_analysis"
+                ? "sparkles"
+                : event.event_type === "medical_document"
+                ? "document"
+                : event.event_type === "health_concern"
+                ? "heart"
+                : event.event_type === "doctor_visit"
+                ? "clipboard"
+                : "activity";
+
+            const date = new Date(event.created_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            });
+
+            return (
+              <div className="activity-item" key={event.id}>
+                <span className="activity-icon">
+                  <Icon name={icon as IconName} />
+                </span>
+
+                <div>
+                  <strong>{event.title}</strong>
+                  <p>{event.description || "Health activity recorded."}</p>
+                </div>
+
+                <Badge tone="info">{date}</Badge>
+              </div>
+            );
+          })
+        )}
+      </Card>
+      </div>
+      
+    </div>
+  </div>;
+}
+
+function PageIntro({ eyebrow, title, copy }: { eyebrow?: string; title: string; copy: string }) {
+  return <div className="page-intro">{eyebrow && <Badge tone="info">{eyebrow}</Badge>}<h1>{title}</h1><p>{copy}</p></div>;
+}
+
+function Assistant() {
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState([{ from: "bot", text: "Hi , I'm your CareBridge health assistant. I can help explain health information, organize your concerns, or prepare questions for a healthcare professional." }]);
+  const send = () => { if (!message.trim()) return; setMessages([...messages, { from: "user", text: message }, { from: "bot", text: "Thanks for sharing that. To help you prepare, when did this start, how severe is it, and has anything made it better or worse?" }]); setMessage(""); };
+  return <div className="assistant-page"><PageIntro eyebrow="AI-assisted support" title="What can I help you understand?" copy="Ask about health information or prepare for a conversation with your care team." />
+    <Card className="chat-shell"><div className="chat-head"><div className="bot-avatar"><Icon name="sparkles" /></div><div><strong>CareBridge Assistant</strong><span><i /> Ready to help</span></div><Badge tone="success">Secure</Badge></div>
+      <div className="chat-messages"><div className="date-divider"><span>Today</span></div>{messages.map((m, i) => <div className={`message-row ${m.from}`} key={i}>{m.from === "bot" && <span className="bot-avatar small"><Icon name="sparkles" size={16} /></span>}<div className="bubble">{m.text}<small>{m.from === "bot" ? "CareBridge AI" : "You"} Â· Just now</small></div></div>)}</div>
+      <div className="prompt-chips"><button onClick={() => setMessage("Help me prepare for a doctor visit")}>Prepare for a visit</button><button onClick={() => setMessage("Explain a medical term")}>Explain a medical term</button><button onClick={() => setMessage("What should I monitor?")}>What should I monitor?</button></div>
+      <div className="chat-input"><textarea value={message} onChange={e => setMessage(e.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); } }} placeholder="Describe what you'd like help understanding..." /><Button className="send-btn" onClick={send} disabled={!message.trim()}><Icon name="send" /></Button></div>
+    </Card><div className="disclaimer"><Icon name="shield" size={17} /><span><strong>For information and navigation only.</strong> CareBridge does not diagnose or replace professional medical care. In an emergency, contact local emergency services.</span></div>
+  </div>;
+}
+
+function Concerns() {
+  const [result, setResult] = useState(false);
+  const [emergency, setEmergency] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [warning, setWarning] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const getGuidance = async () => {
+    if (!title.trim() || !description.trim()) {
+      setResult(false);
+      setWarning(
+        "Please add both a concern title and a description before requesting guidance."
+      );
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setWarning("");
+
+      const data = await createHealthConcern(
+        title.trim(),
+        description.trim()
+      );
+
+      setEmergency(data.status === "emergency");
+      setResult(true);
+
+      notify(
+        data.status === "emergency"
+          ? "Emergency warning signs detected."
+          : "Your health concern has been saved."
+      );
+    } catch (error) {
+      setResult(false);
+
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Failed to save your health concern.",
+        "danger"
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      <PageIntro
+        eyebrow="Health concerns"
+        title="Describe whatâ€™s concerning you"
+        copy="Share what youâ€™re experiencing and receive general, safety-conscious guidance."
+      />
+
+      <div className="two-col">
+        <Card className="form-card">
+          <h2>Tell us whatâ€™s going on</h2>
+
+          {warning && (
+            <div className="alert error" role="alert">
+              <Icon name="warning" />
+              {warning}
+            </div>
+          )}
+
+          <Field
+            label="Concern title"
+            placeholder="e.g. Recurring headaches"
+            value={title}
+            onValueChange={(value) => {
+              setTitle(value);
+              if (warning) setWarning("");
+            }}
+          />
+
+          <Field
+            label="Description"
+            textarea
+            placeholder="Describe what you notice, when it started, and anything that changes it..."
+            value={description}
+            onValueChange={(value) => {
+              setDescription(value);
+              if (warning) setWarning("");
+            }}
+          />
+
+          <Button
+            className="full"
+            icon="sparkles"
+            onClick={getGuidance}
+            disabled={saving}
+          >
+            {saving ? "Checking..." : "Get guidance"}
+          </Button>
+        </Card>
+
+        <div>
+          {!result ? (
+            <Card className="empty-state">
+              <span>
+                <Icon name="heart" size={30} />
+              </span>
+              <h3>Your guidance will appear here</h3>
+              <p>
+                Share enough detail to receive clearer, more useful next
+                steps.
+              </p>
+            </Card>
+          ) : emergency ? (
+            <Card className="emergency-result">
+              <Icon name="warning" size={32} />
+              <h2>Potential emergency warning signs detected</h2>
+              <p>
+                Seek immediate medical attention now. Call your local
+                emergency services or go to the nearest emergency department.
+                Do not wait for online guidance.
+              </p>
+              <strong>
+                CareBridge is not providing a diagnosis.
+              </strong>
+            </Card>
+          ) : (
+            <div className="result-stack">
+              <Card>
+                <div className="result-head">
+                  <span className="mini-icon teal">
+                    <Icon name="shield" />
+                  </span>
+
+                  <div>
+                    <small>Safety status</small>
+                    <h3>No immediate warning signs identified</h3>
+                  </div>
+
+                  <Badge tone="success">Review complete</Badge>
+                </div>
+              </Card>
+
+              {[
+                [
+                  "General guidance",
+                  "Track when symptoms occur, stay hydrated, and note possible triggers.",
+                ],
+                [
+                  "What to monitor",
+                  "Frequency, severity, duration, and any new or changing symptoms.",
+                ],
+                [
+                  "When to seek professional care",
+                  "Arrange care if symptoms persist, worsen, or disrupt daily activities.",
+                ],
+                [
+                  "Follow-up questions",
+                  "When did this begin? Have you noticed vision changes or nausea?",
+                ],
+              ].map(([t, c]) => (
+                <Card className="result-card" key={t}>
+                  <h3>{t}</h3>
+                  <p>{c}</p>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Reports() {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [analyzing, setAnalyzing] = useState<number | null>(null);
+  const [analysis, setAnalysis] = useState<any>(null);
+
+  useEffect(() => {
+    loadDocuments();
+  }, []);
+
+  const loadDocuments = async () => {
+    try {
+      const data = await getMedicalDocuments();
+      setDocuments(data);
+    } catch (error) {
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Failed to load medical documents.",
+        "danger"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const acceptFile = async (file?: File) => {
+    if (!file) return;
+
+    const valid = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+    ].includes(file.type);
+
+    if (!valid || file.size > 10 * 1024 * 1024) {
+      notify(
+        "Choose a PDF, JPG, JPEG, or PNG file under 10 MB.",
+        "danger"
+      );
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      const data = await uploadMedicalDocument(file);
+
+      notify(`${data.filename} uploaded successfully.`);
+
+      await loadDocuments();
+    } catch (error) {
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Failed to upload medical document.",
+        "danger"
+      );
+    } finally {
+      setUploading(false);
+
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleAnalysis = async (medicalDocument: any) => {
+    if (medicalDocument.processing_status !== "completed") {
+      notify(
+        "This document has not finished processing yet.",
+        "danger"
+      );
+      return;
+    }
+
+    try {
+      setAnalyzing(medicalDocument.id);
+
+      notify(
+        "Analyzing your medical report. This may take a moment...",
+        "info"
+      );
+
+      const data = await analyzeMedicalDocument(
+        medicalDocument.id
+      );
+
+      setAnalysis(data);
+
+      setTimeout(() => {
+        document
+          .querySelector("#report-analysis")
+          ?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+
+      notify("Medical report analysis completed.");
+    } catch (error) {
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Failed to analyze medical report.",
+        "danger"
+      );
+    } finally {
+      setAnalyzing(null);
+    }
+  };
+
+  return (
+    <div>
+      <input
+        ref={inputRef}
+        className="visually-hidden"
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png"
+        onChange={(event) =>
+          acceptFile(event.target.files?.[0])
+        }
+      />
+
+      <div className="intro-row">
+        <PageIntro
+          eyebrow="Medical reports"
+          title="Make complex reports easier to understand"
+          copy="Upload a report for a plain-language explanation and questions to discuss with your care team."
+        />
+
+        <Button
+          icon="upload"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+        >
+          {uploading ? "Uploading..." : "Upload report"}
+        </Button>
+      </div>
+
+      <Card
+        className="upload-zone"
+        role="button"
+        tabIndex={0}
+        onClick={() =>
+          !uploading && inputRef.current?.click()
+        }
+        onKeyDown={(event) =>
+          event.key === "Enter" &&
+          !uploading &&
+          inputRef.current?.click()
+        }
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => {
+          event.preventDefault();
+
+          if (!uploading) {
+            acceptFile(event.dataTransfer.files[0]);
+          }
+        }}
+      >
+        <span>
+          <Icon name="upload" size={28} />
+        </span>
+
+        <h3>
+          {uploading
+            ? "Uploading medical report..."
+            : "Drop a medical report here"}
+        </h3>
+
+        <p>or select a file from your device</p>
+
+        <Badge
+          style={
+            {
+            whiteSpace: "nowrap",
+            width: "auto",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "8px 14px",
+            fontSize: "13px",
+            lineHeight: "1.4",
+            }}
+              >
+          PDF, JPG, JPEG or PNG Â· Max 10 MB
+          </Badge>
+      </Card>
+
+      <div className="block-title">
+        <div>
+          <h2>Your documents</h2>
+          <p>Reports and analysis status</p>
+        </div>
+      </div>
+
+      <Card className="table-card">
+        <div className="report-row table-head">
+          <span>Document</span>
+          <span>Uploaded</span>
+          <span>Status</span>
+          <span>Action</span>
+        </div>
+
+        {loading ? (
+          <div className="report-row">
+            <span>Loading documents...</span>
+          </div>
+        ) : documents.length === 0 ? (
+          <div className="report-row">
+            <span>No medical reports uploaded yet.</span>
+          </div>
+        ) : (
+          documents.map((medicalDocument) => {
+            const status =
+              medicalDocument.processing_status;
+
+            const isAnalyzing =
+              analyzing === medicalDocument.id;
+
+            return (
+              <div
+                className="report-row"
+                key={medicalDocument.id}
+              >
+                <div className="document-cell">
+                  <span>
+                    <Icon name="document" />
+                  </span>
+
+                  <div>
+                    <strong>
+                      {medicalDocument.original_filename}
+                    </strong>
+
+                    <small>
+                      {medicalDocument.document_type?.toUpperCase() ||
+                        "DOCUMENT"}
+                    </small>
+                  </div>
+                </div>
+
+                <span>
+                  {medicalDocument.created_at
+                    ? new Date(
+                        medicalDocument.created_at
+                      ).toLocaleDateString()
+                    : "-"}
+                </span>
+
+                <Badge
+                  tone={
+                    status === "completed"
+                      ? "success"
+                      : status === "failed"
+                        ? "danger"
+                        : status === "processing"
+                          ? "info"
+                          : "warning"
+                  }
+                >
+                  {status}
+                </Badge>
+
+                <Button
+                  variant={
+                    status === "completed"
+                      ? "secondary"
+                      : "ghost"
+                  }
+                  disabled={
+                    status !== "completed" || isAnalyzing
+                  }
+                  onClick={() =>
+                    handleAnalysis(medicalDocument)
+                  }
+                >
+                  {isAnalyzing
+                    ? "Analyzing..."
+                    : status === "completed"
+                      ? "View analysis"
+                      : "Not ready"}
+                </Button>
+              </div>
+            );
+          })
+        )}
+      </Card>
+
+      <Card
+        className="analysis-preview"
+        id="report-analysis"
+      >
+        <div className="analysis-title">
+          <span className="feature-icon">
+            <Icon name="sparkles" />
+          </span>
+
+          <div>
+            <Badge tone="success">
+              {analysis
+                ? "Analysis complete"
+                : "Analysis preview"}
+            </Badge>
+
+            <h2>
+              {analysis
+                ? "Medical report analysis"
+                : "Medical report analysis"}
+            </h2>
+
+            <p>
+              {analysis
+                ? `Document ID: ${analysis.document_id}`
+                : "Click View analysis after uploading a processed report."}
+            </p>
+          </div>
+        </div>
+
+        {analysis ? (
+          <div className="analysis-grid">
+         <div
+    style={{
+      gridColumn: "1 / -1",
+      width: "100%",
+      minWidth: 0,
+    }}
+  >
+    <h3>AI analysis</h3>
+
+    <div
+      style={{
+        whiteSpace: "pre-wrap",
+        width: "100%",
+        maxWidth: "100%",
+        lineHeight: 1.7,
+      }}
+    >
+          {analysis.analysis?.analysis ||
+            "No analysis was returned."}
+         </div>
+        </div>
+       </div>
+        ) : null}
+
+        <div className="disclaimer">
+          <Icon name="shield" size={16} />
+          This explanation is general information, not a
+          diagnosis. Review medical results with a qualified
+          healthcare professional.
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function Profile({ user }: { user: User | null }) {
+  const [editing, setEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [profile, setProfile] = useState({
+    date_of_birth: "",
+    blood_group: "",
+    allergies: "",
+    medical_conditions: "",
+    current_medications: "",
+    emergency_contact_name: "",
+    emergency_contact_phone: "",
+  });
+
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    loadHealthProfile();
+  }, []);
+
+  const loadHealthProfile = async () => {
+    try {
+      const data = await getHealthProfile();
+
+      setProfile({
+        date_of_birth: data.date_of_birth || "",
+        blood_group: data.blood_group || "",
+        allergies: data.allergies || "",
+        medical_conditions: data.medical_conditions || "",
+        current_medications: data.current_medications || "",
+        emergency_contact_name: data.emergency_contact_name || "",
+        emergency_contact_phone: data.emergency_contact_phone || "",
+      });
+    } catch (error) {
+      console.log("Health profile not found yet.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleEditing = async () => {
+  if (!editing) {
+    setEditing(true);
+    return;
+  }
+
+  try {
+    setSaving(true);
+
+    await updateHealthProfile(profile);
+
+    notify("Your health profile has been saved.");
+    setEditing(false);
+  } catch (error) {
+    notify(
+      error instanceof Error
+        ? error.message
+        : "Failed to save your health profile.",
+      "danger"
+    );
+  } finally {
+    setSaving(false);
+  }
+};
+
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "U";
+
+  return (
+    <div>
+      <div className="intro-row">
+        <PageIntro
+          eyebrow="Health profile"
+          title="Your health information, in one place"
+          copy="Keep key details current for more relevant, contextual guidance."
+        />
+
+        <Button
+          icon={editing ? "check" : "settings"}
+          onClick={toggleEditing}
+        >
+          {editing ? "Save changes" : "Edit profile"}
+        </Button>
+      </div>
+
+      <Card className="profile-banner">
+        <span>{initials}</span>
+
+        <div>
+          <h2>{user?.name || "Loading..."}</h2>
+          <p>{user?.email || "Loading..."}</p>
+
+          <Badge tone="success">
+            <Icon name="shield" size={13} />
+            Profile
+          </Badge>
+        </div>
+      </Card>
+
+      <div ref={profileRef}>
+        <Card className="form-card profile-form">
+          <div className="form-section">
+            <h2>Personal information</h2>
+
+            <div className="form-grid">
+              <Field
+                label="Full name"
+                defaultValue={user?.name || ""}
+                disabled={!editing}
+              />
+
+              <Field
+              label="Date of birth"
+              type="date"
+              value={profile.date_of_birth}
+              onChange={(e) =>
+              setProfile({ ...profile, date_of_birth: e.target.value })
+                 }
+                disabled={!editing}
+              />
+
+              <Field
+                  label="Blood group"
+                  placeholder="e.g. O+"
+                  value={profile.blood_group}
+                  onChange={(e) =>
+                  setProfile({ ...profile, blood_group: e.target.value })
+                   }                
+                  disabled={!editing}
+                />
+
+              <Field
+                  label="Allergies"
+                  placeholder="e.g. Penicillin"
+                  value={profile.allergies}
+                  onChange={(e) =>
+                  setProfile({ ...profile, allergies: e.target.value })
+                }
+                disabled={!editing}
+              />
+            </div>
+          </div>
+
+          <div className="form-section">
+            <h2>Health details</h2>
+
+            <div className="form-grid">
+              <Field
+                  label="Medical conditions"
+                  placeholder="e.g. Asthma"
+                  value={profile.medical_conditions}
+                  onChange={(e) =>
+                  setProfile({
+                        ...profile,
+                        medical_conditions: e.target.value,
+                      })
+                    }
+                    disabled={!editing}
+                  />
+
+              <Field
+                    label="Current medications"
+                    placeholder="List current medications"
+                    value={profile.current_medications}
+                    onChange={(e) =>
+                    setProfile({
+                        ...profile,
+                        current_medications: e.target.value,
+                      })
+                      }
+                      disabled={!editing}
+                    />
+            </div>
+          </div>
+
+          <div className="form-section">
+            <h2>Emergency contact</h2>
+
+            <div className="form-grid">
+              <Field
+                      label="Contact name"
+                      placeholder="Emergency contact name"
+                      value={profile.emergency_contact_name}
+                      onChange={(e) =>
+                      setProfile({
+                          ...profile,
+                          emergency_contact_name: e.target.value,
+                        })
+                      }
+                    disabled={!editing}
+                  />
+
+              <Field
+                    label="Phone number"
+                    placeholder="+91 XXXXX XXXXX"
+                    value={profile.emergency_contact_phone}
+                    onChange={(e) =>
+                    setProfile({
+                          ...profile,
+                          emergency_contact_phone: e.target.value,
+                        })
+                      }
+                      disabled={!editing}
+                    />
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function Timeline() {
+  const [filter, setFilter] = useState("All events");
+  const [period, setPeriod] = useState("Past 6 months");
+  const [expanded, setExpanded] = useState("");
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadTimeline();
+  }, []);
+
+  const loadTimeline = async () => {
+    try {
+      setLoading(true);
+
+      const data = await getHealthTimeline();
+
+      setEvents(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Failed to load health timeline:", error);
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Failed to load health timeline.",
+        "danger"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getEventIcon = (eventType: string): IconName => {
+    switch (eventType) {
+      case "medical_analysis":
+        return "sparkles";
+
+      case "medical_document":
+        return "document";
+
+      case "health_concern":
+        return "heart";
+
+      case "health_guidance":
+        return "shield";
+
+      case "doctor_visit":
+        return "clipboard";
+
+      default:
+        return "activity";
+    }
+  };
+
+  const getEventLabel = (eventType: string) => {
+    switch (eventType) {
+      case "medical_analysis":
+        return "Medical Analysis";
+
+      case "medical_document":
+        return "Medical Document";
+
+      case "health_concern":
+        return "Health Concern";
+
+      case "health_guidance":
+        return "Health Guidance";
+
+      case "doctor_visit":
+        return "Doctor Visit";
+
+      default:
+        return "Health Event";
+    }
+  };
+
+  const filteredEvents = events.filter((event) => {
+    if (filter === "All events") {
+      return true;
+    }
+
+    return getEventLabel(event.event_type) === filter;
+  });
+
+  return (
+    <div>
+      <PageIntro
+        eyebrow="Health timeline"
+        title="Your health story, organized"
+        copy="See concerns, documents, guidance and care events in one continuous view."
+      />
+
+      <div className="timeline-filters">
+        <Button
+          variant="secondary"
+          onClick={() =>
+            setFilter(
+              filter === "All events"
+                ? "Medical Document"
+                : "All events"
+            )
+          }
+        >
+          {filter}
+          <Icon name="chevron" size={14} />
+        </Button>
+
+        <Button
+          variant="ghost"
+          icon="calendar"
+          onClick={() =>
+            setPeriod(
+              period === "Past 6 months"
+                ? "Past year"
+                : "Past 6 months"
+            )
+          }
+        >
+          {period}
+        </Button>
+      </div>
+
+      {loading ? (
+        <Card>
+          <p>Loading your health timeline...</p>
+        </Card>
+      ) : filteredEvents.length === 0 ? (
+        <Card>
+          <p>No health timeline events found.</p>
+        </Card>
+      ) : (
+        <div className="timeline">
+          {filteredEvents.map((event, index) => {
+            const eventKey = `${event.id}-${event.event_type}`;
+
+            return (
+              <div
+                className="timeline-event"
+                key={eventKey}
+              >
+                <div className="timeline-date">
+                  {new Date(event.created_at).toLocaleDateString(
+                    undefined,
+                    {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    }
+                  )}
+                </div>
+
+                <div className="timeline-marker">
+                  <span>
+                    <Icon
+                      name={getEventIcon(event.event_type)}
+                    />
+                  </span>
+
+                  {index < filteredEvents.length - 1 && <i />}
+                </div>
+
+                <Card>
+                  <Badge tone="info">
+                    {getEventLabel(event.event_type)}
+                  </Badge>
+
+                  <h3>{event.title}</h3>
+
+                  <p>
+                    {event.description ||
+                      "No additional details are available."}
+                  </p>
+
+                  {expanded === eventKey && (
+                    <div className="timeline-detail">
+                      <strong>Event details</strong>
+
+                      <p>
+                        Recorded on{" "}
+                        {new Date(
+                          event.created_at
+                        ).toLocaleString()}
+                        .
+                      </p>
+
+                      {event.reference_id && (
+                        <p>
+                          Reference ID: {event.reference_id}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    className="text-link"
+                    onClick={() =>
+                      setExpanded(
+                        expanded === eventKey
+                          ? ""
+                          : eventKey
+                      )
+                    }
+                  >
+                    {expanded === eventKey
+                      ? "Hide details"
+                      : "View details"}
+
+                    <Icon
+                      name="arrow"
+                      size={15}
+                    />
+                  </button>
+                </Card>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Visit() {
+  const [summary, setSummary] = useState(false);
+  const [customQuestion, setCustomQuestion] = useState("");
+  const [questions, setQuestions] = useState<string[]>([]);
+  const [visit, setVisit] = useState({ concern: "", duration: "", severity: "", changes: "", medications: "", documents: "" });
+  const [warning, setWarning] = useState("");
+  useEffect(() => {
+  const loadLatestVisit = async () => {
+    try {
+      const visits = await getDoctorVisits();
+
+      if (visits && visits.length > 0) {
+        const latest = visits[0];
+
+        setVisit({
+          concern: latest.concern || "",
+          duration: latest.duration || "",
+          severity: String(latest.severity ?? ""),
+          changes: latest.changes || "",
+          medications: latest.medications || "",
+          documents: latest.documents || "",
+        });
+
+        setQuestions(latest.questions || []);
+        setSummary(true);
+      }
+    } catch (error) {
+      console.error("Failed to load saved doctor visit:", error);
+    }
+  };
+
+  loadLatestVisit();
+}, []);
+  const addQuestion = () => {
+    if (!customQuestion.trim()) return notify("Write a question before adding it.", "danger");
+    setQuestions(current => [...current, customQuestion.trim()]); setCustomQuestion(""); notify("Question added to your visit summary.");
+  };
+  const updateVisit = (key: keyof typeof visit, value: string) => { setVisit(current => ({ ...current, [key]: value })); if (warning) setWarning(""); };
+  const createSummary = async () => {
+  if (
+    !visit.concern.trim() ||
+    !visit.duration.trim() ||
+    !visit.severity.trim() ||
+    !visit.changes.trim()
+  ) {
+    setWarning(
+      "Please complete the concern, duration, severity, and changes over time before creating a summary."
+    );
+    return;
+  }
+
+  setWarning("");
+
+  try {
+    await createDoctorVisit({
+      concern: visit.concern.trim(),
+      duration: visit.duration.trim(),
+      severity: Number(visit.severity),
+      changes: visit.changes.trim(),
+      medications: visit.medications.trim(),
+      documents: visit.documents.trim(),
+      questions,
+    });
+
+    setSummary(true);
+    notify("Your visit summary has been saved.");
+  } catch (error) {
+    setWarning(
+      error instanceof Error
+        ? error.message
+        : "Failed to save your visit summary."
+    );
+  }
+};
+  return <div><PageIntro eyebrow="Doctor visit preparation" title="Walk in prepared, not overwhelmed" copy="Organize the details that matter and create a focused summary for your appointment." />
+    {!summary ? <div className="two-col visit-layout"><Card className="form-card"><h2>Visit details</h2>{warning && <div className="alert error" role="alert"><Icon name="warning" />{warning}</div>}<Field label="Symptoms or concerns" textarea placeholder="What would you like to discuss?" value={visit.concern} onValueChange={value => updateVisit("concern", value)} /><div className="form-grid"><Field label="How long?" placeholder="e.g. 2 weeks" value={visit.duration} onValueChange={value => updateVisit("duration", value)} /><Field label="Severity (1â€“10)" type="number" min="1" max="10" placeholder="5" value={visit.severity} onValueChange={value => updateVisit("severity", value)} /></div><Field label="Changes over time" textarea placeholder="Better, worse, or unchanged?" value={visit.changes} onValueChange={value => updateVisit("changes", value)} /><Field label="Current medications" placeholder="List medicines and supplements" value={visit.medications} onValueChange={value => updateVisit("medications", value)} /><Field label="Relevant documents" placeholder="Select from your uploaded reports" value={visit.documents} onValueChange={value => updateVisit("documents", value)} /><Button className="full" icon="sparkles" onClick={createSummary}>Create visit summary</Button></Card><Card className="question-builder"><h2>Questions for your doctor</h2><p>Add your own or choose a suggested question.</p>{["What could be contributing to these symptoms?", "Are there tests I should consider?", "What changes should prompt urgent care?", ...questions].map(q => <label className="check-row" key={q}><input type="checkbox" /><span>{q}</span></label>)}<div className="add-question"><input value={customQuestion} onChange={event => setCustomQuestion(event.target.value)} onKeyDown={event => { if (event.key === "Enter") addQuestion(); }} placeholder="Add a custom question..." /><Button variant="secondary" icon="plus" onClick={addQuestion}>Add</Button></div></Card></div> :
+      <Card className="print-summary"><div className="summary-head"><Logo /><div><Badge tone="success">Ready to print</Badge><h2>Doctor visit summary</h2><p>Prepared {new Date().toLocaleDateString()}</p></div><div className="summary-actions"><Button variant="ghost" onClick={() => setSummary(false)}>Edit</Button><Button variant="secondary" icon="document" onClick={() => window.print()}>Print summary</Button></div></div><div className="summary-grid"><section><h3>Main concern</h3><p>{visit.concern} for {visit.duration}, severity {visit.severity}/10.</p></section><section><h3>Changes over time</h3><p>{visit.changes}</p></section><section><h3>Current medications</h3><p>{visit.medications || "No medications provided."}</p></section><section><h3>Questions to discuss</h3><ol><li>What could be contributing to these symptoms?</li><li>Are there tests I should consider?</li>{questions.map(question => <li key={question}>{question}</li>)}</ol></section></div><div className="disclaimer"><Icon name="shield" size={16} />This summary supports a conversation with your healthcare professional and is not medical advice.</div></Card>}
+  </div>;
+}
+
+function Settings({ dark, setDark, onLogout }: { dark: boolean; setDark: (v: boolean) => void; onLogout: () => void }) {
+  const [active, setActive] = useState("Account");
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [email, setEmail] = useState("alex.morgan@example.com");
+  const [passwords, setPasswords] = useState({ current: "", next: "" });
+  const [accountWarning, setAccountWarning] = useState("");
+  const [passwordWarning, setPasswordWarning] = useState("");
+  const selectSetting = (name: string) => { setActive(name); document.getElementById(`setting-${name}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); };
+  const setSystemTheme = () => { setDark(window.matchMedia("(prefers-color-scheme: dark)").matches); notify("Appearance now follows your system preference."); };
+  const saveAccount = () => {
+    if (!email.trim()) return setAccountWarning("Please enter an email address before saving.");
+    setAccountWarning(""); notify("Account changes saved.");
+  };
+  const updatePassword = () => {
+    if (!passwords.current.trim() || !passwords.next.trim()) return setPasswordWarning("Enter both your current and new password before updating.");
+    if (passwords.next.length < 8) return setPasswordWarning("Your new password must contain at least 8 characters.");
+    setPasswordWarning(""); setPasswords({ current: "", next: "" }); notify("Password updated successfully.");
+  };
+  return <div><PageIntro eyebrow="Settings" title="Make CareBridge work for you" copy="Manage your account, preferences, privacy and security." /><div className="settings-layout"><nav className="settings-nav">{["Account", "Appearance", "Password & security", "Privacy"].map(x => <button className={active === x ? "active" : ""} onClick={() => selectSetting(x)} key={x}>{x}</button>)}</nav><div className="settings-cards"><Card className="settings-card" id="setting-Account"><div><h2>Account</h2><p>Manage your contact information.</p></div>{accountWarning && <div className="alert error" role="alert"><Icon name="warning" />{accountWarning}</div>}<Field label="Email address" value={email} onValueChange={value => { setEmail(value); if (accountWarning) setAccountWarning(""); }} /><Button variant="secondary" onClick={saveAccount}>Save changes</Button></Card><Card className="settings-card" id="setting-Appearance"><div><h2>Appearance</h2><p>Choose how CareBridge looks on this device.</p></div><div className="theme-options">{["Light", "Dark", "System"].map((t,i) => <button className={(t === "Dark") === dark && t !== "System" ? "selected" : ""} key={t} onClick={() => { if (t === "System") setSystemTheme(); else { setDark(t === "Dark"); notify(`${t} appearance selected.`); } }}><span><Icon name={i === 0 ? "sun" : i === 1 ? "moon" : "settings"} /></span><strong>{t}</strong><i /></button>)}</div></Card><Card className="settings-card" id="setting-Password & security"><div><h2>Change password</h2><p>Use a strong, unique password.</p></div>{passwordWarning && <div className="alert error" role="alert"><Icon name="warning" />{passwordWarning}</div>}<div className="form-grid"><Field label="Current password" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" value={passwords.current} onValueChange={value => { setPasswords(current => ({ ...current, current: value })); if (passwordWarning) setPasswordWarning(""); }} /><Field label="New password" type="password" placeholder="At least 8 characters" value={passwords.next} onValueChange={value => { setPasswords(current => ({ ...current, next: value })); if (passwordWarning) setPasswordWarning(""); }} /></div><Button variant="secondary" onClick={updatePassword}>Update password</Button></Card><Card className="settings-card danger-zone" id="setting-Privacy"><div><h2>Privacy & account actions</h2><p>Your information is encrypted and never sold. You can log out or permanently delete your account.</p></div><div><Button variant="secondary" onClick={onLogout}>Log out</Button><Button variant="danger" onClick={() => setDeleteConfirm(true)}>Delete account</Button></div></Card></div></div>{deleteConfirm && <div className="modal-backdrop"><Card className="modal"><span className="modal-icon"><Icon name="warning" /></span><h2>Delete your account?</h2><p>This is a destructive action. For this prototype, your account will remain safe.</p><div className="modal-actions"><Button variant="secondary" onClick={() => setDeleteConfirm(false)}>Cancel</Button><Button variant="danger" onClick={() => { setDeleteConfirm(false); notify("Account deletion request cancelled in this demo.", "info"); }}>Confirm delete</Button></div></Card></div>}</div>;
+}
+
+export default function App() {
+  const [page, setPage] = useState<Page>(() => {
+    const savedPage = sessionStorage.getItem("carebridge_page");
+    return (savedPage as Page) || "home";
+  });
+  const [dark, setDark] = useState(false);
+  useEffect(() => { document.documentElement.dataset.theme = dark ? "dark" : "light"; }, [dark]);
+  const navigate = (p: Page) => {
+    setPage(p);
+    sessionStorage.setItem("carebridge_page", p);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const content = page === "home"
+    ? <Home navigate={navigate} dark={dark} setDark={setDark} />
+    : page === "login" || page === "signup"
+      ? <Auth mode={page} navigate={navigate} dark={dark} setDark={setDark} />
+      : <AppShell page={page} navigate={navigate} dark={dark} setDark={setDark} />;
+  return <><div className="page-transition" key={page}>{content}</div><ToastHost /></>;
+}
+
+
+
+
+
+
+
+
+
+
+
