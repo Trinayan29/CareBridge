@@ -4,7 +4,6 @@ import {
   registerUser,
   getCurrentUser,
   getHealthProfile,
-  getHealthConcerns,
   updateHealthProfile,
   createHealthConcern,
   uploadMedicalDocument,
@@ -192,7 +191,7 @@ function Home({ navigate, dark, setDark }: { navigate: (p: Page) => void; dark: 
         <Card className="emergency-card"><Icon name="warning" size={24} /><div><strong>Think this may be an emergency?</strong><p>Call your local emergency services immediately. Do not wait for guidance from CareBridge.</p></div></Card>
       </section>
     </main>
-    <footer><div className="container footer-inner"><Logo /><p>Clearer information. More confident care.</p><span>Ãƒâ€šÃ‚Â© 2026 CareBridge Health</span></div></footer>
+    <footer><div className="container footer-inner"><Logo /><p>Clearer information. More confident care.</p><span>© 2026 CareBridge Health</span></div></footer>
   </div>;
 }
 
@@ -322,31 +321,14 @@ function AppShell({
   const [menu, setMenu] = useState(false);
   const [logout, setLogout] = useState(false);
   const [notifications, setNotifications] = useState(false);
-  const [notificationEvents, setNotificationEvents] = useState<any[]>([]);
   const [user, setUser] = useState<User | null>(null);
 const [userLoading, setUserLoading] = useState(true);
-
-useEffect(() => {
-  const loadNotifications = async () => {
-    try {
-      const timeline = await getHealthTimeline();
-      setNotificationEvents(
-        Array.isArray(timeline) ? timeline.slice(0, 3) : []
-      );
-    } catch (error) {
-      console.error("Failed to load notifications:", error);
-      setNotificationEvents([]);
-    }
-  };
-
-  loadNotifications();
-}, []);
 
 useEffect(() => {
   const loadUser = async () => {
     try {
       const data = await getCurrentUser();
-      setUser(data?.user ?? data);
+      setUser(data);
     } catch (error) {
       console.error("Failed to load current user:", error);
     } finally {
@@ -382,7 +364,7 @@ useEffect(() => {
     if (!search.trim()) { setSearchOpen(true); searchInputRef.current?.focus(); return; }
     const match = searchResults[selectedResult] || searchResults[0];
     if (match) openResult(match);
-    else { setSearchOpen(true); notify(`No results found for ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ${search}ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â. Try another search.`, "danger"); }
+    else { setSearchOpen(true); notify(`No results found for “${search}”. Try another search.`, "danger"); }
   };
   return <div className="app-shell">
     <aside className={`sidebar ${menu ? "open" : ""}`}>
@@ -391,86 +373,7 @@ useEffect(() => {
       <div className="sidebar-bottom"><Card className="help-card"><span><Icon name="heart" size={17} /></span><strong>Need urgent help?</strong><small>Call local emergency services</small></Card><button onClick={() => setLogout(true)}><Icon name="lock" /><span>Log out</span></button></div>
     </aside>
     <div className="app-content">
-      <header className="app-header"><div className="header-title"><Button variant="ghost" className="menu-btn" onClick={() => setMenu(true)}><Icon name="menu" /></Button><div><small>CareBridge</small><h2>{title}</h2></div></div><div className="header-actions"><form ref={searchRef} className={`search ${searchOpen ? "open" : ""}`} onSubmit={runSearch} role="search"><button className="search-trigger" type="button" onClick={() => { if (search.trim()) runSearch(); else { setSearchOpen(true); searchInputRef.current?.focus(); } }} aria-label="Search CareBridge"><Icon name="search" size={18} /></button><input ref={searchInputRef} value={search} onFocus={() => setSearchOpen(true)} onChange={event => { setSearch(event.target.value); setSelectedResult(0); setSearchOpen(true); }} onKeyDown={event => { if (event.key === "ArrowDown") { event.preventDefault(); setSelectedResult(index => Math.min(index + 1, searchResults.length - 1)); } if (event.key === "ArrowUp") { event.preventDefault(); setSelectedResult(index => Math.max(index - 1, 0)); } if (event.key === "Escape") { setSearchOpen(false); searchInputRef.current?.blur(); } }} placeholder="Search CareBridge..." aria-label="Search CareBridge" aria-expanded={searchOpen} aria-controls="search-suggestions" autoComplete="off" />{search && <button className="search-clear" type="button" onClick={() => { setSearch(""); setSelectedResult(0); searchInputRef.current?.focus(); }} aria-label="Clear search"><Icon name="x" size={15} /></button>}{searchOpen && <Card className="search-suggestions" id="search-suggestions"><div className="search-suggestions-head"><strong>{search ? "Search results" : "Suggested searches"}</strong><small>{searchResults.length} {searchResults.length === 1 ? "result" : "results"}</small></div>{searchResults.length ? searchResults.map((item, index) => <button type="button" className={index === selectedResult ? "selected" : ""} key={`${item.page}-${item.title}`} onMouseDown={event => event.preventDefault()} onMouseEnter={() => setSelectedResult(index)} onClick={() => openResult(item)}><span className="mini-icon teal"><Icon name={item.icon} size={18} /></span><p><strong>{item.title}</strong><small>{item.description}</small></p><Icon name="arrow" size={16} /></button>) : <div className="search-empty"><span><Icon name="search" /></span><strong>No results found</strong><small>Try ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œreportsÃƒÂ¢Ã¢â€šÂ¬Ã‚Â, ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œmedicationsÃƒÂ¢Ã¢â€šÂ¬Ã‚Â, ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œtimelineÃƒÂ¢Ã¢â€šÂ¬Ã‚Â, or ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œsettingsÃƒÂ¢Ã¢â€šÂ¬Ã‚Â.</small></div>}<div className="search-hint"><span><kbd>ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬Ëœ</kbd><kbd>ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬Å“</kbd> to navigate</span><span><kbd>Enter</kbd> to open</span></div></Card>}</form><ThemeToggle dark={dark} setDark={setDark} /><div className="notification-wrap">
-  <Button
-    variant="ghost"
-    className="icon-btn notify"
-    onClick={() => setNotifications(!notifications)}
-    aria-label="View notifications"
-  >
-    <Icon name="bell" />
-    {notificationEvents.length > 0 && <i />}
-  </Button>
-
-  {notifications && (
-    <Card className="notification-menu">
-      <div>
-        <strong>Notifications</strong>
-        <Badge tone="info">
-          {notificationEvents.length} new
-        </Badge>
-      </div>
-
-      {notificationEvents.length > 0 ? (
-        notificationEvents.map((event: any, index: number) => (
-          <button
-            key={event.id ?? index}
-            onClick={() => {
-              if (
-                event.event_type === "medical_document" ||
-                event.event_type === "medical_analysis"
-              ) {
-                navigate("reports");
-              } else if (event.event_type === "doctor_visit") {
-                navigate("visit");
-              } else if (event.event_type === "health_concern") {
-                navigate("concerns");
-              } else {
-                navigate("timeline");
-              }
-              setNotifications(false);
-            }}
-          >
-            <span className="mini-icon blue">
-              <Icon
-                name={
-                  event.event_type === "doctor_visit"
-                    ? "calendar"
-                    : event.event_type === "health_concern"
-                      ? "heart"
-                      : "document"
-                }
-              />
-            </span>
-            <p>
-              <strong>{event.title || "Health activity"}</strong>
-              <small>
-                {event.description || "A new health activity was recorded."}
-              </small>
-            </p>
-          </button>
-        ))
-      ) : (
-        <div className="search-empty">
-          <span><Icon name="bell" /></span>
-          <strong>No new notifications</strong>
-          <small>Your latest health activity will appear here.</small>
-        </div>
-      )}
-
-      <Button
-        variant="ghost"
-        className="full"
-        onClick={() => {
-          setNotifications(false);
-          notify("Notifications marked as read.");
-        }}
-      >
-        Mark all as read
-      </Button>
-    </Card>
-  )}
-</div><button className="profile-chip" onClick={() => navigate("profile")}>
+      <header className="app-header"><div className="header-title"><Button variant="ghost" className="menu-btn" onClick={() => setMenu(true)}><Icon name="menu" /></Button><div><small>CareBridge</small><h2>{title}</h2></div></div><div className="header-actions"><form ref={searchRef} className={`search ${searchOpen ? "open" : ""}`} onSubmit={runSearch} role="search"><button className="search-trigger" type="button" onClick={() => { if (search.trim()) runSearch(); else { setSearchOpen(true); searchInputRef.current?.focus(); } }} aria-label="Search CareBridge"><Icon name="search" size={18} /></button><input ref={searchInputRef} value={search} onFocus={() => setSearchOpen(true)} onChange={event => { setSearch(event.target.value); setSelectedResult(0); setSearchOpen(true); }} onKeyDown={event => { if (event.key === "ArrowDown") { event.preventDefault(); setSelectedResult(index => Math.min(index + 1, searchResults.length - 1)); } if (event.key === "ArrowUp") { event.preventDefault(); setSelectedResult(index => Math.max(index - 1, 0)); } if (event.key === "Escape") { setSearchOpen(false); searchInputRef.current?.blur(); } }} placeholder="Search CareBridge..." aria-label="Search CareBridge" aria-expanded={searchOpen} aria-controls="search-suggestions" autoComplete="off" />{search && <button className="search-clear" type="button" onClick={() => { setSearch(""); setSelectedResult(0); searchInputRef.current?.focus(); }} aria-label="Clear search"><Icon name="x" size={15} /></button>}{searchOpen && <Card className="search-suggestions" id="search-suggestions"><div className="search-suggestions-head"><strong>{search ? "Search results" : "Suggested searches"}</strong><small>{searchResults.length} {searchResults.length === 1 ? "result" : "results"}</small></div>{searchResults.length ? searchResults.map((item, index) => <button type="button" className={index === selectedResult ? "selected" : ""} key={`${item.page}-${item.title}`} onMouseDown={event => event.preventDefault()} onMouseEnter={() => setSelectedResult(index)} onClick={() => openResult(item)}><span className="mini-icon teal"><Icon name={item.icon} size={18} /></span><p><strong>{item.title}</strong><small>{item.description}</small></p><Icon name="arrow" size={16} /></button>) : <div className="search-empty"><span><Icon name="search" /></span><strong>No results found</strong><small>Try “reports”, “medications”, “timeline”, or “settings”.</small></div>}<div className="search-hint"><span><kbd>↑</kbd><kbd>↓</kbd> to navigate</span><span><kbd>Enter</kbd> to open</span></div></Card>}</form><ThemeToggle dark={dark} setDark={setDark} /><div className="notification-wrap"><Button variant="ghost" className="icon-btn notify" onClick={() => setNotifications(!notifications)} aria-label="View notifications"><Icon name="bell" /><i /></Button>{notifications && <Card className="notification-menu"><div><strong>Notifications</strong><Badge tone="info">2 new</Badge></div><button onClick={() => { navigate("reports"); setNotifications(false); }}><span className="mini-icon blue"><Icon name="document" /></span><p><strong>Report analysis ready</strong><small>Your blood test summary is available.</small></p></button><button onClick={() => { navigate("visit"); setNotifications(false); }}><span className="mini-icon teal"><Icon name="calendar" /></span><p><strong>Visit reminder</strong><small>Prepare for your upcoming appointment.</small></p></button><Button variant="ghost" className="full" onClick={() => { setNotifications(false); notify("All notifications marked as read."); }}>Mark all as read</Button></Card>}</div><button className="profile-chip" onClick={() => navigate("profile")}>
   <span>
     {user?.name
       ? user.name
@@ -501,7 +404,7 @@ useEffect(() => {
       </main>
       <nav className="mobile-nav">{navItems.slice(0, 5).map(([p, icon, label]) => <button className={page === p ? "active" : ""} key={p} onClick={() => navigate(p)}><Icon name={icon} /><span>{label.replace("Health ", "")}</span></button>)}</nav>
     </div>
-    {logout && <div className="modal-backdrop"><Card className="modal"><span className="modal-icon"><Icon name="lock" /></span><h2>Are you sure you want to log out?</h2><p>You will need to sign in again to access your health information.</p><div className="modal-actions"><Button variant="secondary" onClick={() => setLogout(false)}>Cancel</Button><Button variant="danger" onClick={() => navigate("login")}>Log out</Button></div></Card></div>}
+    {logout && <div className="modal-backdrop"><Card className="modal"><span className="modal-icon"><Icon name="lock" /></span><h2>Are you sure you want to log out?</h2><p>You’ll need to sign in again to access your health information.</p><div className="modal-actions"><Button variant="secondary" onClick={() => setLogout(false)}>Cancel</Button><Button variant="danger" onClick={() => navigate("login")}>Log out</Button></div></Card></div>}
   </div>;
 }
 
@@ -512,12 +415,6 @@ function Dashboard({
   navigate: (p: Page) => void;
   user: User | null;
 }) {
-  const actions: [Page, IconName, string, string][] = [
-    ["concerns", "heart", "Describe a health concern", "Get general guidance and helpful next steps"],
-    ["reports", "upload", "Upload a medical report", "Understand complex results in plain language"],
-    ["visit", "clipboard", "Prepare for a doctor visit", "Organize your symptoms and questions"],
-  ];
-
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -529,172 +426,55 @@ function Dashboard({
   timeline: 0,
   });
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
-  const [profileCompleteness, setProfileCompleteness] = useState(0);
 
   useEffect(() => {
-    if (!user) return;
-
     const loadDashboardStats = async () => {
       try {
-        const [
-          concernsResult,
-          reportsResult,
-          timelineResult,
-          profileResult,
-        ] = await Promise.allSettled([
-          getHealthConcerns(),
-          getMedicalDocuments(),
-          getHealthTimeline(),
-          getHealthProfile(),
-        ]);
+      const [concerns, reports, timeline] = await Promise.all([
+        getHealthProfile(),
+        getMedicalDocuments(),
+        getHealthTimeline(),
+      ]);
 
-        const concerns =
-          concernsResult.status === "fulfilled" &&
-          Array.isArray(concernsResult.value)
-            ? concernsResult.value
-            : [];
+      setDashboardStats({
+        concerns: Array.isArray(concerns?.concerns)
+          ? concerns.concerns.filter((item: { status?: string }) => item.status === "active").length
+          : 0,
+        reports: Array.isArray(reports) ? reports.length : 0,
+        timeline: Array.isArray(timeline) ? timeline.length : 0,
+      });
+      setRecentEvents(
+       Array.isArray(timeline) ? timeline.slice(0, 3) : []
+    );
+    } catch (error) {
+      console.error("Failed to load dashboard statistics:", error);
+    }
+  };
 
-        const reports =
-          reportsResult.status === "fulfilled" &&
-          Array.isArray(reportsResult.value)
-            ? reportsResult.value
-            : [];
-
-        const timeline =
-          timelineResult.status === "fulfilled" &&
-          Array.isArray(timelineResult.value)
-            ? timelineResult.value
-            : [];
-
-        setDashboardStats({
-          concerns: concerns.filter(
-            (item: { status?: string }) =>
-              String(item.status || "").toLowerCase() === "active"
-          ).length,
-          reports: reports.length,
-          timeline: timeline.length,
-        });
-
-        const sortedTimeline = [...timeline].sort(
-          (a: any, b: any) =>
-            new Date(b.created_at || b.date || 0).getTime() -
-            new Date(a.created_at || a.date || 0).getTime()
-        );
-
-        setRecentEvents(sortedTimeline.slice(0, 3));
-
-        if (profileResult.status === "fulfilled") {
-          const healthProfile = profileResult.value;
-
-          const profileFields = [
-            healthProfile?.date_of_birth,
-            healthProfile?.blood_group,
-            healthProfile?.allergies,
-            healthProfile?.medical_conditions,
-            healthProfile?.current_medications,
-            healthProfile?.emergency_contact_name,
-            healthProfile?.emergency_contact_phone,
-          ];
-
-          const completedFields = profileFields.filter(
-            (field) =>
-              field !== null &&
-              field !== undefined &&
-              String(field).trim() !== ""
-          ).length;
-
-          setProfileCompleteness(
-            Math.round((completedFields / profileFields.length) * 100)
-          );
-        }
-
-        if (concernsResult.status === "rejected") {
-          console.error("Health concerns API failed:", concernsResult.reason);
-        }
-
-        if (reportsResult.status === "rejected") {
-          console.error("Medical documents API failed:", reportsResult.reason);
-        }
-
-        if (timelineResult.status === "rejected") {
-          console.error("Health timeline API failed:", timelineResult.reason);
-        }
-
-        if (profileResult.status === "rejected") {
-          console.error("Health profile API failed:", profileResult.reason);
-        }
-      } catch (error) {
-        console.error("Dashboard API loading failed:", error);
-      }
-    };
-
-    loadDashboardStats();
-  }, [user]);
-
+  loadDashboardStats();
+}, []);
+  const actions: [Page, IconName, string, string][] = [
+    ["concerns", "heart", "Describe a health concern", "Get general guidance and helpful next steps"],
+    ["reports", "upload", "Upload a medical report", "Understand complex results in plain language"],
+    ["visit", "clipboard", "Prepare for a doctor visit", "Organize your symptoms and questions"],
+  ];
   const stats = [
   ["heart", String(dashboardStats.concerns), "Active concerns", "From your health concerns"],
   ["document", String(dashboardStats.reports), "Medical reports", "Uploaded documents"],
   ["activity", String(dashboardStats.timeline), "Timeline events", "Recorded health activity"],
 ] as const;
   return <div className="dashboard-page">
-    <div className="welcome"><div><Badge tone="info">{today}</Badge><h1>Good to see you, {user?.name?.split(" ")[0] || "there"}</h1><p>How can CareBridge help you today?</p></div><div className="wellbeing"><span className="pulse"><Icon name="heart" /></span><div><small>Your health space</small><strong>
-  {profileCompleteness < 100
-    ? "Your profile needs attention"
-    : dashboardStats.timeline === 0
-      ? "Start building your health timeline"
-      : "Everything looks up to date"}
-</strong></div></div></div>
+    <div className="welcome"><div><Badge tone="info">{today}</Badge><h1>Good to see you, {user?.name?.split(" ")[0] || "there"}</h1><p>How can CareBridge help you today?</p></div><div className="wellbeing"><span className="pulse"><Icon name="heart" /></span><div><small>Your health space</small><strong>Everything looks up to date</strong></div></div></div>
     <div className="quick-grid">{actions.map(([page, icon, title, copy], i) => <Card className={`quick-card quick-${i}`} key={title}><span className="quick-icon"><Icon name={icon} /></span><div><h3>{title}</h3><p>{copy}</p></div><Button variant="ghost" className="round-btn" onClick={() => navigate(page)}><Icon name="arrow" /></Button></Card>)}</div>
     <div className="content-grid"><div><div className="block-title"><div><h2>Your overview</h2><p>A snapshot of your recent health activity</p></div></div><div className="stats-grid">{stats.map(([icon, num, label, note]) => <Card className="stat-card" key={label}><span><Icon name={icon} /></span><div><strong>{num}</strong><p>{label}</p><small>{note}</small></div></Card>)}</div>
       <div className="block-title activity-title"><div><h2>Recent activity</h2><p>Your latest updates across CareBridge</p></div><button className="text-link" onClick={() => navigate("timeline")}>View timeline <Icon name="arrow" size={16} /></button></div>
-      <Card className="activity-list">
-        {recentEvents.length > 0 ? (
-          recentEvents.map((event: any, index: number) => (
-            <div className="activity-item" key={event.id ?? index}>
-              <span className="activity-icon">
-                <Icon
-                  name={
-                    event.event_type === "medical_analysis"
-                      ? "sparkles"
-                      : event.event_type === "medical_document"
-                        ? "document"
-                        : event.event_type === "health_concern"
-                          ? "heart"
-                          : event.event_type === "doctor_visit"
-                            ? "clipboard"
-                            : "activity"
-                  }
-                />
-              </span>
-              <div>
-                <strong>{event.title || "Health activity"}</strong>
-                <p>
-                  {event.description ||
-                    "A new health activity was recorded."}
-                </p>
-              </div>
-              <Badge tone="info">
-                {event.created_at
-                  ? new Date(event.created_at).toLocaleDateString()
-                  : "Recently"}
-              </Badge>
-            </div>
-          ))
-        ) : (
-          <div className="activity-item">
-            <span className="activity-icon">
-              <Icon name="activity" />
-            </span>
-            <div>
-              <strong>No recent activity</strong>
-              <p>Your recent health activity will appear here.</p>
-            </div>
-            <Badge tone="neutral"></Badge>
-          </div>
-        )}
-      </Card>
+      <Card className="activity-list">{[
+        ["document", "Blood test report analyzed", "Your report is ready with a plain-language summary.", "2 hours ago", "success"],
+        ["heart", "Headache concern updated", "New monitoring guidance was added.", "Yesterday", "info"],
+        ["clipboard", "Doctor visit summary created", "Prepared for your primary care visit.", "May 16", "neutral"],
+      ].map(([icon, title, copy, date, tone]) => <div className="activity-item" key={title}><span className="activity-icon"><Icon name={icon as IconName} /></span><div><strong>{title}</strong><p>{copy}</p></div><Badge tone={tone as "success" | "info" | "neutral"}>{date}</Badge></div>)}</Card>
     </div>
-    <aside><Card className="next-step"><Badge tone="info">Suggested next step</Badge><span className="big-illustration"><Icon name={profileCompleteness >= 100 ? "check" : "clipboard"} size={32} /></span><h3>{profileCompleteness >= 100 ? "Your health profile is complete" : "Complete your health profile"}</h3><p>{profileCompleteness >= 100 ? "Review your health information regularly to keep it accurate and up to date." : "Add missing health information for more relevant guidance."}</p><div className="progress-label"><span>Profile completeness</span><strong>{profileCompleteness}%</strong></div><div className="progress"><i style={{ width: `${profileCompleteness}%` }} /></div><Button className="full" onClick={() => navigate("profile")}>{profileCompleteness >= 100 ? "Review profile" : "Continue profile"}</Button></Card>
+    <aside><Card className="next-step"><Badge tone="info">Suggested next step</Badge><span className="big-illustration"><Icon name="clipboard" size={32} /></span><h3>Complete your health profile</h3><p>Add allergies and current medications for more relevant guidance.</p><div className="progress-label"><span>Profile completeness</span><strong>72%</strong></div><div className="progress"><i /></div><Button className="full" onClick={() => navigate("profile")}>Continue profile</Button></Card>
     <Card className="privacy-card"><Icon name="shield" /><div><strong>Your privacy matters</strong><p>Your health information is encrypted and never sold.</p><button className="text-link" onClick={() => navigate("settings")}>Learn about privacy</button></div></Card></aside></div>
   </div>;
 }
@@ -709,7 +489,7 @@ function Assistant() {
   const send = () => { if (!message.trim()) return; setMessages([...messages, { from: "user", text: message }, { from: "bot", text: "Thanks for sharing that. To help you prepare, when did this start, how severe is it, and has anything made it better or worse?" }]); setMessage(""); };
   return <div className="assistant-page"><PageIntro eyebrow="AI-assisted support" title="What can I help you understand?" copy="Ask about health information or prepare for a conversation with your care team." />
     <Card className="chat-shell"><div className="chat-head"><div className="bot-avatar"><Icon name="sparkles" /></div><div><strong>CareBridge Assistant</strong><span><i /> Ready to help</span></div><Badge tone="success">Secure</Badge></div>
-      <div className="chat-messages"><div className="date-divider"><span>Today</span></div>{messages.map((m, i) => <div className={`message-row ${m.from}`} key={i}>{m.from === "bot" && <span className="bot-avatar small"><Icon name="sparkles" size={16} /></span>}<div className="bubble">{m.text}<small>{m.from === "bot" ? "CareBridge AI" : "You"} Ãƒâ€šÃ‚Â· Just now</small></div></div>)}</div>
+      <div className="chat-messages"><div className="date-divider"><span>Today</span></div>{messages.map((m, i) => <div className={`message-row ${m.from}`} key={i}>{m.from === "bot" && <span className="bot-avatar small"><Icon name="sparkles" size={16} /></span>}<div className="bubble">{m.text}<small>{m.from === "bot" ? "CareBridge AI" : "You"} · Just now</small></div></div>)}</div>
       <div className="prompt-chips"><button onClick={() => setMessage("Help me prepare for a doctor visit")}>Prepare for a visit</button><button onClick={() => setMessage("Explain a medical term")}>Explain a medical term</button><button onClick={() => setMessage("What should I monitor?")}>What should I monitor?</button></div>
       <div className="chat-input"><textarea value={message} onChange={e => setMessage(e.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); } }} placeholder="Describe what you'd like help understanding..." /><Button className="send-btn" onClick={send} disabled={!message.trim()}><Icon name="send" /></Button></div>
     </Card><div className="disclaimer"><Icon name="shield" size={17} /><span><strong>For information and navigation only.</strong> CareBridge does not diagnose or replace professional medical care. In an emergency, contact local emergency services.</span></div>
@@ -768,13 +548,13 @@ function Concerns() {
     <div>
       <PageIntro
         eyebrow="Health concerns"
-        title="Describe whatÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢s concerning you"
-        copy="Share what youÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢re experiencing and receive general, safety-conscious guidance."
+        title="Describe what’s concerning you"
+        copy="Share what you’re experiencing and receive general, safety-conscious guidance."
       />
 
       <div className="two-col">
         <Card className="form-card">
-          <h2>Tell us whatÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢s going on</h2>
+          <h2>Tell us what’s going on</h2>
 
           {warning && (
             <div className="alert error" role="alert">
@@ -1073,7 +853,7 @@ function Reports() {
             lineHeight: "1.4",
             }}
               >
-          PDF, JPG, JPEG or PNG Ãƒâ€šÃ‚Â· Max 10 MB
+          PDF, JPG, JPEG or PNG · Max 10 MB
           </Badge>
       </Card>
 
@@ -1759,7 +1539,7 @@ function Visit() {
   }
 };
   return <div><PageIntro eyebrow="Doctor visit preparation" title="Walk in prepared, not overwhelmed" copy="Organize the details that matter and create a focused summary for your appointment." />
-    {!summary ? <div className="two-col visit-layout"><Card className="form-card"><h2>Visit details</h2>{warning && <div className="alert error" role="alert"><Icon name="warning" />{warning}</div>}<Field label="Symptoms or concerns" textarea placeholder="What would you like to discuss?" value={visit.concern} onValueChange={value => updateVisit("concern", value)} /><div className="form-grid"><Field label="How long?" placeholder="e.g. 2 weeks" value={visit.duration} onValueChange={value => updateVisit("duration", value)} /><Field label="Severity (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“10)" type="number" min="1" max="10" placeholder="5" value={visit.severity} onValueChange={value => updateVisit("severity", value)} /></div><Field label="Changes over time" textarea placeholder="Better, worse, or unchanged?" value={visit.changes} onValueChange={value => updateVisit("changes", value)} /><Field label="Current medications" placeholder="List medicines and supplements" value={visit.medications} onValueChange={value => updateVisit("medications", value)} /><Field label="Relevant documents" placeholder="Select from your uploaded reports" value={visit.documents} onValueChange={value => updateVisit("documents", value)} /><Button className="full" icon="sparkles" onClick={createSummary}>Create visit summary</Button></Card><Card className="question-builder"><h2>Questions for your doctor</h2><p>Add your own or choose a suggested question.</p>{["What could be contributing to these symptoms?", "Are there tests I should consider?", "What changes should prompt urgent care?", ...questions].map(q => <label className="check-row" key={q}><input type="checkbox" /><span>{q}</span></label>)}<div className="add-question"><input value={customQuestion} onChange={event => setCustomQuestion(event.target.value)} onKeyDown={event => { if (event.key === "Enter") addQuestion(); }} placeholder="Add a custom question..." /><Button variant="secondary" icon="plus" onClick={addQuestion}>Add</Button></div></Card></div> :
+    {!summary ? <div className="two-col visit-layout"><Card className="form-card"><h2>Visit details</h2>{warning && <div className="alert error" role="alert"><Icon name="warning" />{warning}</div>}<Field label="Symptoms or concerns" textarea placeholder="What would you like to discuss?" value={visit.concern} onValueChange={value => updateVisit("concern", value)} /><div className="form-grid"><Field label="How long?" placeholder="e.g. 2 weeks" value={visit.duration} onValueChange={value => updateVisit("duration", value)} /><Field label="Severity (1–10)" type="number" min="1" max="10" placeholder="5" value={visit.severity} onValueChange={value => updateVisit("severity", value)} /></div><Field label="Changes over time" textarea placeholder="Better, worse, or unchanged?" value={visit.changes} onValueChange={value => updateVisit("changes", value)} /><Field label="Current medications" placeholder="List medicines and supplements" value={visit.medications} onValueChange={value => updateVisit("medications", value)} /><Field label="Relevant documents" placeholder="Select from your uploaded reports" value={visit.documents} onValueChange={value => updateVisit("documents", value)} /><Button className="full" icon="sparkles" onClick={createSummary}>Create visit summary</Button></Card><Card className="question-builder"><h2>Questions for your doctor</h2><p>Add your own or choose a suggested question.</p>{["What could be contributing to these symptoms?", "Are there tests I should consider?", "What changes should prompt urgent care?", ...questions].map(q => <label className="check-row" key={q}><input type="checkbox" /><span>{q}</span></label>)}<div className="add-question"><input value={customQuestion} onChange={event => setCustomQuestion(event.target.value)} onKeyDown={event => { if (event.key === "Enter") addQuestion(); }} placeholder="Add a custom question..." /><Button variant="secondary" icon="plus" onClick={addQuestion}>Add</Button></div></Card></div> :
       <Card className="print-summary"><div className="summary-head"><Logo /><div><Badge tone="success">Ready to print</Badge><h2>Doctor visit summary</h2><p>Prepared {new Date().toLocaleDateString()}</p></div><div className="summary-actions"><Button variant="ghost" onClick={() => setSummary(false)}>Edit</Button><Button variant="secondary" icon="document" onClick={() => window.print()}>Print summary</Button></div></div><div className="summary-grid"><section><h3>Main concern</h3><p>{visit.concern} for {visit.duration}, severity {visit.severity}/10.</p></section><section><h3>Changes over time</h3><p>{visit.changes}</p></section><section><h3>Current medications</h3><p>{visit.medications || "No medications provided."}</p></section><section><h3>Questions to discuss</h3><ol><li>What could be contributing to these symptoms?</li><li>Are there tests I should consider?</li>{questions.map(question => <li key={question}>{question}</li>)}</ol></section></div><div className="disclaimer"><Icon name="shield" size={16} />This summary supports a conversation with your healthcare professional and is not medical advice.</div></Card>}
   </div>;
 }
@@ -1782,14 +1562,14 @@ function Settings({ dark, setDark, onLogout }: { dark: boolean; setDark: (v: boo
     if (passwords.next.length < 8) return setPasswordWarning("Your new password must contain at least 8 characters.");
     setPasswordWarning(""); setPasswords({ current: "", next: "" }); notify("Password updated successfully.");
   };
-  return <div><PageIntro eyebrow="Settings" title="Make CareBridge work for you" copy="Manage your account, preferences, privacy and security." /><div className="settings-layout"><nav className="settings-nav">{["Account", "Appearance", "Password & security", "Privacy"].map(x => <button className={active === x ? "active" : ""} onClick={() => selectSetting(x)} key={x}>{x}</button>)}</nav><div className="settings-cards"><Card className="settings-card" id="setting-Account"><div><h2>Account</h2><p>Manage your contact information.</p></div>{accountWarning && <div className="alert error" role="alert"><Icon name="warning" />{accountWarning}</div>}<Field label="Email address" value={email} onValueChange={value => { setEmail(value); if (accountWarning) setAccountWarning(""); }} /><Button variant="secondary" onClick={saveAccount}>Save changes</Button></Card><Card className="settings-card" id="setting-Appearance"><div><h2>Appearance</h2><p>Choose how CareBridge looks on this device.</p></div><div className="theme-options">{["Light", "Dark", "System"].map((t,i) => <button className={(t === "Dark") === dark && t !== "System" ? "selected" : ""} key={t} onClick={() => { if (t === "System") setSystemTheme(); else { setDark(t === "Dark"); notify(`${t} appearance selected.`); } }}><span><Icon name={i === 0 ? "sun" : i === 1 ? "moon" : "settings"} /></span><strong>{t}</strong><i /></button>)}</div></Card><Card className="settings-card" id="setting-Password & security"><div><h2>Change password</h2><p>Use a strong, unique password.</p></div>{passwordWarning && <div className="alert error" role="alert"><Icon name="warning" />{passwordWarning}</div>}<div className="form-grid"><Field label="Current password" type="password" placeholder="ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢" value={passwords.current} onValueChange={value => { setPasswords(current => ({ ...current, current: value })); if (passwordWarning) setPasswordWarning(""); }} /><Field label="New password" type="password" placeholder="At least 8 characters" value={passwords.next} onValueChange={value => { setPasswords(current => ({ ...current, next: value })); if (passwordWarning) setPasswordWarning(""); }} /></div><Button variant="secondary" onClick={updatePassword}>Update password</Button></Card><Card className="settings-card danger-zone" id="setting-Privacy"><div><h2>Privacy & account actions</h2><p>Your information is encrypted and never sold. You can log out or permanently delete your account.</p></div><div><Button variant="secondary" onClick={onLogout}>Log out</Button><Button variant="danger" onClick={() => setDeleteConfirm(true)}>Delete account</Button></div></Card></div></div>{deleteConfirm && <div className="modal-backdrop"><Card className="modal"><span className="modal-icon"><Icon name="warning" /></span><h2>Delete your account?</h2><p>This is a destructive action. For this prototype, your account will remain safe.</p><div className="modal-actions"><Button variant="secondary" onClick={() => setDeleteConfirm(false)}>Cancel</Button><Button variant="danger" onClick={() => { setDeleteConfirm(false); notify("Account deletion request cancelled in this demo.", "info"); }}>Confirm delete</Button></div></Card></div>}</div>;
+  return <div><PageIntro eyebrow="Settings" title="Make CareBridge work for you" copy="Manage your account, preferences, privacy and security." /><div className="settings-layout"><nav className="settings-nav">{["Account", "Appearance", "Password & security", "Privacy"].map(x => <button className={active === x ? "active" : ""} onClick={() => selectSetting(x)} key={x}>{x}</button>)}</nav><div className="settings-cards"><Card className="settings-card" id="setting-Account"><div><h2>Account</h2><p>Manage your contact information.</p></div>{accountWarning && <div className="alert error" role="alert"><Icon name="warning" />{accountWarning}</div>}<Field label="Email address" value={email} onValueChange={value => { setEmail(value); if (accountWarning) setAccountWarning(""); }} /><Button variant="secondary" onClick={saveAccount}>Save changes</Button></Card><Card className="settings-card" id="setting-Appearance"><div><h2>Appearance</h2><p>Choose how CareBridge looks on this device.</p></div><div className="theme-options">{["Light", "Dark", "System"].map((t,i) => <button className={(t === "Dark") === dark && t !== "System" ? "selected" : ""} key={t} onClick={() => { if (t === "System") setSystemTheme(); else { setDark(t === "Dark"); notify(`${t} appearance selected.`); } }}><span><Icon name={i === 0 ? "sun" : i === 1 ? "moon" : "settings"} /></span><strong>{t}</strong><i /></button>)}</div></Card><Card className="settings-card" id="setting-Password & security"><div><h2>Change password</h2><p>Use a strong, unique password.</p></div>{passwordWarning && <div className="alert error" role="alert"><Icon name="warning" />{passwordWarning}</div>}<div className="form-grid"><Field label="Current password" type="password" placeholder="••••••••" value={passwords.current} onValueChange={value => { setPasswords(current => ({ ...current, current: value })); if (passwordWarning) setPasswordWarning(""); }} /><Field label="New password" type="password" placeholder="At least 8 characters" value={passwords.next} onValueChange={value => { setPasswords(current => ({ ...current, next: value })); if (passwordWarning) setPasswordWarning(""); }} /></div><Button variant="secondary" onClick={updatePassword}>Update password</Button></Card><Card className="settings-card danger-zone" id="setting-Privacy"><div><h2>Privacy & account actions</h2><p>Your information is encrypted and never sold. You can log out or permanently delete your account.</p></div><div><Button variant="secondary" onClick={onLogout}>Log out</Button><Button variant="danger" onClick={() => setDeleteConfirm(true)}>Delete account</Button></div></Card></div></div>{deleteConfirm && <div className="modal-backdrop"><Card className="modal"><span className="modal-icon"><Icon name="warning" /></span><h2>Delete your account?</h2><p>This is a destructive action. For this prototype, your account will remain safe.</p><div className="modal-actions"><Button variant="secondary" onClick={() => setDeleteConfirm(false)}>Cancel</Button><Button variant="danger" onClick={() => { setDeleteConfirm(false); notify("Account deletion request cancelled in this demo.", "info"); }}>Confirm delete</Button></div></Card></div>}</div>;
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>(() => (localStorage.getItem("carebridge_page") as Page) || "home");
-  const [dark, setDark] = useState(() => localStorage.getItem("carebridge_dark") === "true");
-  useEffect(() => { document.documentElement.dataset.theme = dark ? "dark" : "light"; localStorage.setItem("carebridge_dark", String(dark)); }, [dark]);
-  const navigate = (p: Page) => { setPage(p); localStorage.setItem("carebridge_page", p); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const [page, setPage] = useState<Page>("home");
+  const [dark, setDark] = useState(false);
+  useEffect(() => { document.documentElement.dataset.theme = dark ? "dark" : "light"; }, [dark]);
+  const navigate = (p: Page) => { setPage(p); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const content = page === "home"
     ? <Home navigate={navigate} dark={dark} setDark={setDark} />
     : page === "login" || page === "signup"
@@ -1797,14 +1577,3 @@ export default function App() {
       : <AppShell page={page} navigate={navigate} dark={dark} setDark={setDark} />;
   return <><div className="page-transition" key={page}>{content}</div><ToastHost /></>;
 }
-
-
-
-
-
-
-
-
-
-
-
