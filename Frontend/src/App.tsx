@@ -787,7 +787,7 @@ function Concerns() {
       <PageIntro
         eyebrow="Health concerns"
         title="Describe what is concerning you"
-        copy="Share what youÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢re experiencing and receive general, safety-conscious guidance."
+        copy="Share what you are experiencing and receive general, safety-conscious guidance."
       />
 
       <div className="two-col">
