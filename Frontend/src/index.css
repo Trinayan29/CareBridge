@@ -730,3 +730,56 @@ footer { border-top: 1px solid var(--line); background: var(--surface); }
   .print-summary { border: 0; box-shadow: none; max-width: none; }
   .print-summary .btn { display: none; }
 }
+
+/* Android-only fix: CareBridge dashboard mobile layout */
+@media (max-width: 600px) {
+  .android-device .dashboard-page,
+  .android-device .dashboard-page .content-grid,
+  .android-device .dashboard-page .content-grid > div,
+  .android-device .dashboard-page .content-grid > aside {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .android-device .dashboard-page .content-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .android-device .dashboard-page .content-grid aside {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .android-device .dashboard-page .activity-title {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .android-device .dashboard-page .activity-item {
+    grid-template-columns: 38px minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  .android-device .dashboard-page .activity-item > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .android-device .dashboard-page .activity-item > .badge {
+    grid-column: 2;
+    justify-self: start;
+    max-width: 100%;
+  }
+
+  .android-device .dashboard-page .stats-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .android-device .dashboard-page .quick-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .android-device .dashboard-page .quick-card:last-child {
+    grid-column: auto;
+  }
+}
