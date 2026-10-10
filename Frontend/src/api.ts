@@ -129,6 +129,12 @@ export async function getHealthConcerns() {
   return apiRequest("/health-concerns/");
 }
 
+export async function getHealthGuidance(concernId: number) {
+  return apiRequest(`/health-guidance/${concernId}`, {
+    method: "POST",
+  });
+}
+
 export async function uploadMedicalDocument(file: File) {
   const token = localStorage.getItem("access_token");
 

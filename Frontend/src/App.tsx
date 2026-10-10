@@ -12,8 +12,7 @@ import {
   analyzeMedicalDocument,
   getHealthTimeline,
   createDoctorVisit,
-  getDoctorVisits,
-} from "./api";
+  getDoctorVisits, getHealthGuidance} from "./api";
 
 type Page =
   | "home"
@@ -192,7 +191,7 @@ function Home({ navigate, dark, setDark }: { navigate: (p: Page) => void; dark: 
         <Card className="emergency-card"><Icon name="warning" size={24} /><div><strong>Think this may be an emergency?</strong><p>Call your local emergency services immediately. Do not wait for guidance from CareBridge.</p></div></Card>
       </section>
     </main>
-    <footer><div className="container footer-inner"><Logo /><p>Clearer information. More confident care.</p><span>Ãƒâ€šÃ‚Â© 2026 CareBridge Health</span></div></footer>
+    <footer><div className="container footer-inner"><Logo /><p>Clearer information. More confident care.</p><span>ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© 2026 CareBridge Health</span></div></footer>
   </div>;
 }
 
@@ -382,7 +381,7 @@ useEffect(() => {
     if (!search.trim()) { setSearchOpen(true); searchInputRef.current?.focus(); return; }
     const match = searchResults[selectedResult] || searchResults[0];
     if (match) openResult(match);
-    else { setSearchOpen(true); notify(`No results found for ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ${search}ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â. Try another search.`, "danger"); }
+    else { setSearchOpen(true); notify(`No results found for ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“${search}ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â. Try another search.`, "danger"); }
   };
   return <div className="app-shell">
     <aside className={`sidebar ${menu ? "open" : ""}`}>
@@ -391,7 +390,7 @@ useEffect(() => {
       <div className="sidebar-bottom"><Card className="help-card"><span><Icon name="heart" size={17} /></span><strong>Need urgent help?</strong><small>Call local emergency services</small></Card><button onClick={() => setLogout(true)}><Icon name="lock" /><span>Log out</span></button></div>
     </aside>
     <div className="app-content">
-      <header className="app-header"><div className="header-title"><Button variant="ghost" className="menu-btn" onClick={() => setMenu(true)}><Icon name="menu" /></Button><div><small>CareBridge</small><h2>{title}</h2></div></div><div className="header-actions"><form ref={searchRef} className={`search ${searchOpen ? "open" : ""}`} onSubmit={runSearch} role="search"><button className="search-trigger" type="button" onClick={() => { if (search.trim()) runSearch(); else { setSearchOpen(true); searchInputRef.current?.focus(); } }} aria-label="Search CareBridge"><Icon name="search" size={18} /></button><input ref={searchInputRef} value={search} onFocus={() => setSearchOpen(true)} onChange={event => { setSearch(event.target.value); setSelectedResult(0); setSearchOpen(true); }} onKeyDown={event => { if (event.key === "ArrowDown") { event.preventDefault(); setSelectedResult(index => Math.min(index + 1, searchResults.length - 1)); } if (event.key === "ArrowUp") { event.preventDefault(); setSelectedResult(index => Math.max(index - 1, 0)); } if (event.key === "Escape") { setSearchOpen(false); searchInputRef.current?.blur(); } }} placeholder="Search CareBridge..." aria-label="Search CareBridge" aria-expanded={searchOpen} aria-controls="search-suggestions" autoComplete="off" />{search && <button className="search-clear" type="button" onClick={() => { setSearch(""); setSelectedResult(0); searchInputRef.current?.focus(); }} aria-label="Clear search"><Icon name="x" size={15} /></button>}{searchOpen && <Card className="search-suggestions" id="search-suggestions"><div className="search-suggestions-head"><strong>{search ? "Search results" : "Suggested searches"}</strong><small>{searchResults.length} {searchResults.length === 1 ? "result" : "results"}</small></div>{searchResults.length ? searchResults.map((item, index) => <button type="button" className={index === selectedResult ? "selected" : ""} key={`${item.page}-${item.title}`} onMouseDown={event => event.preventDefault()} onMouseEnter={() => setSelectedResult(index)} onClick={() => openResult(item)}><span className="mini-icon teal"><Icon name={item.icon} size={18} /></span><p><strong>{item.title}</strong><small>{item.description}</small></p><Icon name="arrow" size={16} /></button>) : <div className="search-empty"><span><Icon name="search" /></span><strong>No results found</strong><small>Try ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œreportsÃƒÂ¢Ã¢â€šÂ¬Ã‚Â, ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œmedicationsÃƒÂ¢Ã¢â€šÂ¬Ã‚Â, ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œtimelineÃƒÂ¢Ã¢â€šÂ¬Ã‚Â, or ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œsettingsÃƒÂ¢Ã¢â€šÂ¬Ã‚Â.</small></div>}<div className="search-hint"><span><kbd>ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬Ëœ</kbd><kbd>ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬Å“</kbd> to navigate</span><span><kbd>Enter</kbd> to open</span></div></Card>}</form><ThemeToggle dark={dark} setDark={setDark} /><div className="notification-wrap">
+      <header className="app-header"><div className="header-title"><Button variant="ghost" className="menu-btn" onClick={() => setMenu(true)}><Icon name="menu" /></Button><div><small>CareBridge</small><h2>{title}</h2></div></div><div className="header-actions"><form ref={searchRef} className={`search ${searchOpen ? "open" : ""}`} onSubmit={runSearch} role="search"><button className="search-trigger" type="button" onClick={() => { if (search.trim()) runSearch(); else { setSearchOpen(true); searchInputRef.current?.focus(); } }} aria-label="Search CareBridge"><Icon name="search" size={18} /></button><input ref={searchInputRef} value={search} onFocus={() => setSearchOpen(true)} onChange={event => { setSearch(event.target.value); setSelectedResult(0); setSearchOpen(true); }} onKeyDown={event => { if (event.key === "ArrowDown") { event.preventDefault(); setSelectedResult(index => Math.min(index + 1, searchResults.length - 1)); } if (event.key === "ArrowUp") { event.preventDefault(); setSelectedResult(index => Math.max(index - 1, 0)); } if (event.key === "Escape") { setSearchOpen(false); searchInputRef.current?.blur(); } }} placeholder="Search CareBridge..." aria-label="Search CareBridge" aria-expanded={searchOpen} aria-controls="search-suggestions" autoComplete="off" />{search && <button className="search-clear" type="button" onClick={() => { setSearch(""); setSelectedResult(0); searchInputRef.current?.focus(); }} aria-label="Clear search"><Icon name="x" size={15} /></button>}{searchOpen && <Card className="search-suggestions" id="search-suggestions"><div className="search-suggestions-head"><strong>{search ? "Search results" : "Suggested searches"}</strong><small>{searchResults.length} {searchResults.length === 1 ? "result" : "results"}</small></div>{searchResults.length ? searchResults.map((item, index) => <button type="button" className={index === selectedResult ? "selected" : ""} key={`${item.page}-${item.title}`} onMouseDown={event => event.preventDefault()} onMouseEnter={() => setSelectedResult(index)} onClick={() => openResult(item)}><span className="mini-icon teal"><Icon name={item.icon} size={18} /></span><p><strong>{item.title}</strong><small>{item.description}</small></p><Icon name="arrow" size={16} /></button>) : <div className="search-empty"><span><Icon name="search" /></span><strong>No results found</strong><small>Try ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“reportsÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â, ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“medicationsÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â, ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“timelineÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â, or ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“settingsÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â.</small></div>}<div className="search-hint"><span><kbd>ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“</kbd><kbd>ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ</kbd> to navigate</span><span><kbd>Enter</kbd> to open</span></div></Card>}</form><ThemeToggle dark={dark} setDark={setDark} /><div className="notification-wrap">
   <Button
     variant="ghost"
     className="icon-btn notify"
@@ -709,7 +708,7 @@ function Assistant() {
   const send = () => { if (!message.trim()) return; setMessages([...messages, { from: "user", text: message }, { from: "bot", text: "Thanks for sharing that. To help you prepare, when did this start, how severe is it, and has anything made it better or worse?" }]); setMessage(""); };
   return <div className="assistant-page"><PageIntro eyebrow="AI-assisted support" title="What can I help you understand?" copy="Ask about health information or prepare for a conversation with your care team." />
     <Card className="chat-shell"><div className="chat-head"><div className="bot-avatar"><Icon name="sparkles" /></div><div><strong>CareBridge Assistant</strong><span><i /> Ready to help</span></div><Badge tone="success">Secure</Badge></div>
-      <div className="chat-messages"><div className="date-divider"><span>Today</span></div>{messages.map((m, i) => <div className={`message-row ${m.from}`} key={i}>{m.from === "bot" && <span className="bot-avatar small"><Icon name="sparkles" size={16} /></span>}<div className="bubble">{m.text}<small>{m.from === "bot" ? "CareBridge AI" : "You"} Ãƒâ€šÃ‚Â· Just now</small></div></div>)}</div>
+      <div className="chat-messages"><div className="date-divider"><span>Today</span></div>{messages.map((m, i) => <div className={`message-row ${m.from}`} key={i}>{m.from === "bot" && <span className="bot-avatar small"><Icon name="sparkles" size={16} /></span>}<div className="bubble">{m.text}<small>{m.from === "bot" ? "CareBridge AI" : "You"} ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Just now</small></div></div>)}</div>
       <div className="prompt-chips"><button onClick={() => setMessage("Help me prepare for a doctor visit")}>Prepare for a visit</button><button onClick={() => setMessage("Explain a medical term")}>Explain a medical term</button><button onClick={() => setMessage("What should I monitor?")}>What should I monitor?</button></div>
       <div className="chat-input"><textarea value={message} onChange={e => setMessage(e.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); } }} placeholder="Describe what you'd like help understanding..." /><Button className="send-btn" onClick={send} disabled={!message.trim()}><Icon name="send" /></Button></div>
     </Card><div className="disclaimer"><Icon name="shield" size={17} /><span><strong>For information and navigation only.</strong> CareBridge does not diagnose or replace professional medical care. In an emergency, contact local emergency services.</span></div>
@@ -719,6 +718,8 @@ function Assistant() {
 function Concerns() {
   const [result, setResult] = useState(false);
   const [emergency, setEmergency] = useState(false);
+  const [guidance, setGuidance] = useState("");
+  const [followUpQuestions, setFollowUpQuestions] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [warning, setWarning] = useState("");
@@ -737,19 +738,36 @@ function Concerns() {
       setSaving(true);
       setWarning("");
 
-      const data = await createHealthConcern(
+      const concern = await createHealthConcern(
         title.trim(),
         description.trim()
       );
 
-      setEmergency(data.status === "emergency");
-      setResult(true);
+      // An emergency result from the save endpoint must never be delayed
+      // by an AI provider request.
+      if (concern.status === "emergency") {
+        setEmergency(true);
+        setGuidance(
+          "Seek immediate medical attention now. Contact local emergency services or go to the nearest emergency department. Do not wait for online guidance."
+        );
+        setFollowUpQuestions([]);
+        setResult(true);
+        notify("Emergency warning signs detected.");
+        return;
+      }
 
-      notify(
-        data.status === "emergency"
-          ? "Emergency warning signs detected."
-          : "Your health concern has been saved."
+      const response = await getHealthGuidance(Number(concern.id));
+      setEmergency(Boolean(response.safety?.is_emergency));
+      setGuidance(
+        typeof response.guidance === "string" ? response.guidance : ""
       );
+      setFollowUpQuestions(
+        Array.isArray(response.follow_up_questions)
+          ? response.follow_up_questions
+          : []
+      );
+      setResult(true);
+      notify("Your health guidance is ready.");
     } catch (error) {
       setResult(false);
 
@@ -768,13 +786,13 @@ function Concerns() {
     <div>
       <PageIntro
         eyebrow="Health concerns"
-        title="Describe whatÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢s concerning you"
-        copy="Share what youÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢re experiencing and receive general, safety-conscious guidance."
+        title="Describe what is concerning you"
+        copy="Share what youÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢re experiencing and receive general, safety-conscious guidance."
       />
 
       <div className="two-col">
         <Card className="form-card">
-          <h2>Tell us whatÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢s going on</h2>
+          <h2>Tell us what is going on</h2>
 
           {warning && (
             <div className="alert error" role="alert">
@@ -856,29 +874,22 @@ function Concerns() {
                 </div>
               </Card>
 
-              {[
-                [
-                  "General guidance",
-                  "Track when symptoms occur, stay hydrated, and note possible triggers.",
-                ],
-                [
-                  "What to monitor",
-                  "Frequency, severity, duration, and any new or changing symptoms.",
-                ],
-                [
-                  "When to seek professional care",
-                  "Arrange care if symptoms persist, worsen, or disrupt daily activities.",
-                ],
-                [
-                  "Follow-up questions",
-                  "When did this begin? Have you noticed vision changes or nausea?",
-                ],
-              ].map(([t, c]) => (
-                <Card className="result-card" key={t}>
-                  <h3>{t}</h3>
-                  <p>{c}</p>
+              <Card className="result-card">
+                <h3>AI-generated general guidance</h3>
+                <p style={{ whiteSpace: "pre-wrap" }}>
+                  {guidance || "No guidance text was returned. Please try again or consult a qualified healthcare professional."}
+                </p>
+              </Card>
+              {followUpQuestions.length > 0 && (
+                <Card className="result-card">
+                  <h3>Follow-up questions</h3>
+                  <ul>
+                    {followUpQuestions.map((question, index) => (
+                      <li key={`${index}-${question}`}>{question}</li>
+                    ))}
+                  </ul>
                 </Card>
-              ))}
+              )}
             </div>
           )}
         </div>
@@ -1073,7 +1084,7 @@ function Reports() {
             lineHeight: "1.4",
             }}
               >
-          PDF, JPG, JPEG or PNG Ãƒâ€šÃ‚Â· Max 10 MB
+          PDF, JPG, JPEG or PNG ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Max 10 MB
           </Badge>
       </Card>
 
@@ -1759,7 +1770,7 @@ function Visit() {
   }
 };
   return <div><PageIntro eyebrow="Doctor visit preparation" title="Walk in prepared, not overwhelmed" copy="Organize the details that matter and create a focused summary for your appointment." />
-    {!summary ? <div className="two-col visit-layout"><Card className="form-card"><h2>Visit details</h2>{warning && <div className="alert error" role="alert"><Icon name="warning" />{warning}</div>}<Field label="Symptoms or concerns" textarea placeholder="What would you like to discuss?" value={visit.concern} onValueChange={value => updateVisit("concern", value)} /><div className="form-grid"><Field label="How long?" placeholder="e.g. 2 weeks" value={visit.duration} onValueChange={value => updateVisit("duration", value)} /><Field label="Severity (1ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“10)" type="number" min="1" max="10" placeholder="5" value={visit.severity} onValueChange={value => updateVisit("severity", value)} /></div><Field label="Changes over time" textarea placeholder="Better, worse, or unchanged?" value={visit.changes} onValueChange={value => updateVisit("changes", value)} /><Field label="Current medications" placeholder="List medicines and supplements" value={visit.medications} onValueChange={value => updateVisit("medications", value)} /><Field label="Relevant documents" placeholder="Select from your uploaded reports" value={visit.documents} onValueChange={value => updateVisit("documents", value)} /><Button className="full" icon="sparkles" onClick={createSummary}>Create visit summary</Button></Card><Card className="question-builder"><h2>Questions for your doctor</h2><p>Add your own or choose a suggested question.</p>{["What could be contributing to these symptoms?", "Are there tests I should consider?", "What changes should prompt urgent care?", ...questions].map(q => <label className="check-row" key={q}><input type="checkbox" /><span>{q}</span></label>)}<div className="add-question"><input value={customQuestion} onChange={event => setCustomQuestion(event.target.value)} onKeyDown={event => { if (event.key === "Enter") addQuestion(); }} placeholder="Add a custom question..." /><Button variant="secondary" icon="plus" onClick={addQuestion}>Add</Button></div></Card></div> :
+    {!summary ? <div className="two-col visit-layout"><Card className="form-card"><h2>Visit details</h2>{warning && <div className="alert error" role="alert"><Icon name="warning" />{warning}</div>}<Field label="Symptoms or concerns" textarea placeholder="What would you like to discuss?" value={visit.concern} onValueChange={value => updateVisit("concern", value)} /><div className="form-grid"><Field label="How long?" placeholder="e.g. 2 weeks" value={visit.duration} onValueChange={value => updateVisit("duration", value)} /><Field label="Severity (1ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ10)" type="number" min="1" max="10" placeholder="5" value={visit.severity} onValueChange={value => updateVisit("severity", value)} /></div><Field label="Changes over time" textarea placeholder="Better, worse, or unchanged?" value={visit.changes} onValueChange={value => updateVisit("changes", value)} /><Field label="Current medications" placeholder="List medicines and supplements" value={visit.medications} onValueChange={value => updateVisit("medications", value)} /><Field label="Relevant documents" placeholder="Select from your uploaded reports" value={visit.documents} onValueChange={value => updateVisit("documents", value)} /><Button className="full" icon="sparkles" onClick={createSummary}>Create visit summary</Button></Card><Card className="question-builder"><h2>Questions for your doctor</h2><p>Add your own or choose a suggested question.</p>{["What could be contributing to these symptoms?", "Are there tests I should consider?", "What changes should prompt urgent care?", ...questions].map(q => <label className="check-row" key={q}><input type="checkbox" /><span>{q}</span></label>)}<div className="add-question"><input value={customQuestion} onChange={event => setCustomQuestion(event.target.value)} onKeyDown={event => { if (event.key === "Enter") addQuestion(); }} placeholder="Add a custom question..." /><Button variant="secondary" icon="plus" onClick={addQuestion}>Add</Button></div></Card></div> :
       <Card className="print-summary"><div className="summary-head"><Logo /><div><Badge tone="success">Ready to print</Badge><h2>Doctor visit summary</h2><p>Prepared {new Date().toLocaleDateString()}</p></div><div className="summary-actions"><Button variant="ghost" onClick={() => setSummary(false)}>Edit</Button><Button variant="secondary" icon="document" onClick={() => window.print()}>Print summary</Button></div></div><div className="summary-grid"><section><h3>Main concern</h3><p>{visit.concern} for {visit.duration}, severity {visit.severity}/10.</p></section><section><h3>Changes over time</h3><p>{visit.changes}</p></section><section><h3>Current medications</h3><p>{visit.medications || "No medications provided."}</p></section><section><h3>Questions to discuss</h3><ol><li>What could be contributing to these symptoms?</li><li>Are there tests I should consider?</li>{questions.map(question => <li key={question}>{question}</li>)}</ol></section></div><div className="disclaimer"><Icon name="shield" size={16} />This summary supports a conversation with your healthcare professional and is not medical advice.</div></Card>}
   </div>;
 }
@@ -1782,7 +1793,7 @@ function Settings({ dark, setDark, onLogout }: { dark: boolean; setDark: (v: boo
     if (passwords.next.length < 8) return setPasswordWarning("Your new password must contain at least 8 characters.");
     setPasswordWarning(""); setPasswords({ current: "", next: "" }); notify("Password updated successfully.");
   };
-  return <div><PageIntro eyebrow="Settings" title="Make CareBridge work for you" copy="Manage your account, preferences, privacy and security." /><div className="settings-layout"><nav className="settings-nav">{["Account", "Appearance", "Password & security", "Privacy"].map(x => <button className={active === x ? "active" : ""} onClick={() => selectSetting(x)} key={x}>{x}</button>)}</nav><div className="settings-cards"><Card className="settings-card" id="setting-Account"><div><h2>Account</h2><p>Manage your contact information.</p></div>{accountWarning && <div className="alert error" role="alert"><Icon name="warning" />{accountWarning}</div>}<Field label="Email address" value={email} onValueChange={value => { setEmail(value); if (accountWarning) setAccountWarning(""); }} /><Button variant="secondary" onClick={saveAccount}>Save changes</Button></Card><Card className="settings-card" id="setting-Appearance"><div><h2>Appearance</h2><p>Choose how CareBridge looks on this device.</p></div><div className="theme-options">{["Light", "Dark", "System"].map((t,i) => <button className={(t === "Dark") === dark && t !== "System" ? "selected" : ""} key={t} onClick={() => { if (t === "System") setSystemTheme(); else { setDark(t === "Dark"); notify(`${t} appearance selected.`); } }}><span><Icon name={i === 0 ? "sun" : i === 1 ? "moon" : "settings"} /></span><strong>{t}</strong><i /></button>)}</div></Card><Card className="settings-card" id="setting-Password & security"><div><h2>Change password</h2><p>Use a strong, unique password.</p></div>{passwordWarning && <div className="alert error" role="alert"><Icon name="warning" />{passwordWarning}</div>}<div className="form-grid"><Field label="Current password" type="password" placeholder="ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢" value={passwords.current} onValueChange={value => { setPasswords(current => ({ ...current, current: value })); if (passwordWarning) setPasswordWarning(""); }} /><Field label="New password" type="password" placeholder="At least 8 characters" value={passwords.next} onValueChange={value => { setPasswords(current => ({ ...current, next: value })); if (passwordWarning) setPasswordWarning(""); }} /></div><Button variant="secondary" onClick={updatePassword}>Update password</Button></Card><Card className="settings-card danger-zone" id="setting-Privacy"><div><h2>Privacy & account actions</h2><p>Your information is encrypted and never sold. You can log out or permanently delete your account.</p></div><div><Button variant="secondary" onClick={onLogout}>Log out</Button><Button variant="danger" onClick={() => setDeleteConfirm(true)}>Delete account</Button></div></Card></div></div>{deleteConfirm && <div className="modal-backdrop"><Card className="modal"><span className="modal-icon"><Icon name="warning" /></span><h2>Delete your account?</h2><p>This is a destructive action. For this prototype, your account will remain safe.</p><div className="modal-actions"><Button variant="secondary" onClick={() => setDeleteConfirm(false)}>Cancel</Button><Button variant="danger" onClick={() => { setDeleteConfirm(false); notify("Account deletion request cancelled in this demo.", "info"); }}>Confirm delete</Button></div></Card></div>}</div>;
+  return <div><PageIntro eyebrow="Settings" title="Make CareBridge work for you" copy="Manage your account, preferences, privacy and security." /><div className="settings-layout"><nav className="settings-nav">{["Account", "Appearance", "Password & security", "Privacy"].map(x => <button className={active === x ? "active" : ""} onClick={() => selectSetting(x)} key={x}>{x}</button>)}</nav><div className="settings-cards"><Card className="settings-card" id="setting-Account"><div><h2>Account</h2><p>Manage your contact information.</p></div>{accountWarning && <div className="alert error" role="alert"><Icon name="warning" />{accountWarning}</div>}<Field label="Email address" value={email} onValueChange={value => { setEmail(value); if (accountWarning) setAccountWarning(""); }} /><Button variant="secondary" onClick={saveAccount}>Save changes</Button></Card><Card className="settings-card" id="setting-Appearance"><div><h2>Appearance</h2><p>Choose how CareBridge looks on this device.</p></div><div className="theme-options">{["Light", "Dark", "System"].map((t,i) => <button className={(t === "Dark") === dark && t !== "System" ? "selected" : ""} key={t} onClick={() => { if (t === "System") setSystemTheme(); else { setDark(t === "Dark"); notify(`${t} appearance selected.`); } }}><span><Icon name={i === 0 ? "sun" : i === 1 ? "moon" : "settings"} /></span><strong>{t}</strong><i /></button>)}</div></Card><Card className="settings-card" id="setting-Password & security"><div><h2>Change password</h2><p>Use a strong, unique password.</p></div>{passwordWarning && <div className="alert error" role="alert"><Icon name="warning" />{passwordWarning}</div>}<div className="form-grid"><Field label="Current password" type="password" placeholder="ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢" value={passwords.current} onValueChange={value => { setPasswords(current => ({ ...current, current: value })); if (passwordWarning) setPasswordWarning(""); }} /><Field label="New password" type="password" placeholder="At least 8 characters" value={passwords.next} onValueChange={value => { setPasswords(current => ({ ...current, next: value })); if (passwordWarning) setPasswordWarning(""); }} /></div><Button variant="secondary" onClick={updatePassword}>Update password</Button></Card><Card className="settings-card danger-zone" id="setting-Privacy"><div><h2>Privacy & account actions</h2><p>Your information is encrypted and never sold. You can log out or permanently delete your account.</p></div><div><Button variant="secondary" onClick={onLogout}>Log out</Button><Button variant="danger" onClick={() => setDeleteConfirm(true)}>Delete account</Button></div></Card></div></div>{deleteConfirm && <div className="modal-backdrop"><Card className="modal"><span className="modal-icon"><Icon name="warning" /></span><h2>Delete your account?</h2><p>This is a destructive action. For this prototype, your account will remain safe.</p><div className="modal-actions"><Button variant="secondary" onClick={() => setDeleteConfirm(false)}>Cancel</Button><Button variant="danger" onClick={() => { setDeleteConfirm(false); notify("Account deletion request cancelled in this demo.", "info"); }}>Confirm delete</Button></div></Card></div>}</div>;
 }
 
 export default function App() {
@@ -1797,14 +1808,3 @@ export default function App() {
       : <AppShell page={page} navigate={navigate} dark={dark} setDark={setDark} />;
   return <><div className="page-transition" key={page}>{content}</div><ToastHost /></>;
 }
-
-
-
-
-
-
-
-
-
-
-

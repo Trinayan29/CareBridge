@@ -1,80 +1,75 @@
 import json
-import subprocess
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
-
-BOB_PATH = r"C:\Users\Trinayan\AppData\Roaming\npm\bob.cmd"
+from app.core.config import settings
 
 
 class AIService:
-
     def _chat(self, prompt: str) -> str:
         if not prompt or not prompt.strip():
-            raise ValueError("Bob prompt cannot be empty.")
+            raise ValueError("AI prompt cannot be empty.")
+
+        if not settings.BOB_API_KEY:
+            raise RuntimeError(
+                "AI service is not configured: BOB_API_KEY is missing."
+            )
+
+        payload = {
+            "model": settings.BOB_MODEL,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.2,
+        }
+        request = Request(
+            settings.BOB_API_URL,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {settings.BOB_API_KEY}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            method="POST",
+        )
 
         try:
-            result = subprocess.run(
-                [
-                    BOB_PATH,
-                    "run",
-                    "--format",
-                    "json",
-                    "--trust",
-                ],
-                input=prompt,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=120,
-                cwd=".",
-            )
-
-        except subprocess.TimeoutExpired:
-            raise RuntimeError("IBM Bob request timed out.")
-
-        except FileNotFoundError:
+            with urlopen(request, timeout=120) as response:
+                result = json.loads(response.read().decode("utf-8"))
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
             raise RuntimeError(
-                f"IBM Bob Shell was not found at: {BOB_PATH}"
-            )
-
-        if result.returncode != 0:
-            error_message = (
-                result.stderr.strip()
-                if result.stderr
-                else "Unknown Bob Shell error."
-            )
-
-            raise RuntimeError(
-                f"IBM Bob request failed: {error_message}"
-            )
-
-        if not result.stdout:
-            raise RuntimeError(
-                "IBM Bob returned no output."
-            )
-
-        try:
-            data = json.loads(result.stdout)
-
-        except json.JSONDecodeError as exc:
-            raise RuntimeError(
-                f"IBM Bob returned invalid JSON: {result.stdout}"
+                f"AI provider returned HTTP {exc.code}: {detail[:500]}"
             ) from exc
-
-        if data.get("status") != "success":
+        except URLError as exc:
             raise RuntimeError(
-                f"IBM Bob request was unsuccessful: {data}"
+                f"Could not reach the AI provider: {exc.reason}"
+            ) from exc
+        except TimeoutError as exc:
+            raise RuntimeError("AI provider request timed out.") from exc
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("AI provider returned invalid JSON.") from exc
+
+        choices = result.get("choices") or []
+        if not choices:
+            raise RuntimeError(
+                "AI provider response did not contain any choices."
             )
 
-        message = data.get("last_message")
-
-        if not message:
-            raise RuntimeError(
-                "IBM Bob returned no assistant message."
+        message = choices[0].get("message") or {}
+        content = message.get("content")
+        if isinstance(content, list):
+            content = "\n".join(
+                item.get("text", "")
+                for item in content
+                if isinstance(item, dict)
             )
 
-        return message
+        if not isinstance(content, str) or not content.strip():
+            raise RuntimeError(
+                "AI provider returned an empty assistant response."
+            )
+
+        return content.strip()
 
     def analyze_medical_report(
         self,
